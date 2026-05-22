@@ -5,3 +5,5 @@ feedparser
 apscheduler
 python-dotenv
 certifi
+flask
+flask-cors

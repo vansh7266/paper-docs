@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>arXiv Research Pipeline — Paper Review</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --border:   #2a2d3a;
+      --accent:   #6c63ff;
+      --accent2:  #4ecdc4;
+      --text:     #e8eaf0;
+      --muted:    #7a7f9a;
+      --star-on:  #f5c518;
+      --star-off: #3a3d50;
+      --success:  #43b97f;
+      --error:    #e05c5c;
+      --radius:   12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      white-space: nowrap;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    #stats {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    #stats span { color: var(--accent2); font-weight: 600; }
+
+    /* ── Load Button ── */
+    #load-btn {
+      background: linear-gradient(135deg, var(--accent), #8b83ff);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 9px 20px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+
+    #load-btn:hover:not(:disabled) {
+      opacity: 0.88;
+      transform: translateY(-1px);
+    }
+
+    #load-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── Stop Button ── */
+    #stop-btn {
+      background: transparent;
+      color: var(--error);
+      border: 1.5px solid var(--error);
+      border-radius: var(--radius);
+      padding: 9px 20px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      white-space: nowrap;
+      display: none;   /* hidden by default, shown while fetching */
+    }
+
+    #stop-btn:hover {
+      background: rgba(224,92,92,0.12);
+      transform: translateY(-1px);
+    }
+
+    /* ── Progress bar ── */
+    #progress-wrap {
+      display: none;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 32px;
+      align-items: center;
+      gap: 14px;
+    }
+
+    #progress-wrap.visible { display: flex; }
+
+    #progress-bar-bg {
+      flex: 1;
+      height: 5px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    #progress-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+      min-width: 120px;
+    }
+
+    /* ── Controls bar ── */
+    .controls {
+      padding: 16px 32px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .controls input {
+      flex: 1;
+      min-width: 200px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 16px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .controls input:focus { border-color: var(--accent); }
+
+    .controls select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 14px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 28px 32px;
+    }
+
+    /* ── Empty state ── */
+    #empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--muted);
+    }
+
+    #empty-state .big-icon { font-size: 3rem; margin-bottom: 16px; }
+    #empty-state h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+    #empty-state p  { font-size: 0.88rem; line-height: 1.7; max-width: 420px; margin: 0 auto; }
+
+    /* ── Paper card ── */
+    .paper-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      margin-bottom: 14px;
+      transition: border-color 0.2s, transform 0.15s;
+      animation: fadeUp 0.35s ease forwards;
+    }
+
+    .paper-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .paper-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .paper-title a {
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--text);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .paper-title a:hover { color: var(--accent2); }
+
+    .paper-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .badge {
+      background: rgba(108,99,255,0.12);
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+      font-size: 0.72rem;
+    }
+
+    .badge.rated {
+      background: rgba(78,205,196,0.12);
+      color: var(--accent2);
+    }
+
+    .badge.new-badge {
+      background: rgba(67,185,127,0.12);
+      color: var(--success);
+    }
+
+    .paper-abstract {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.65;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .paper-abstract.expanded { -webkit-line-clamp: unset; }
+
+    .toggle-abstract {
+      font-size: 0.76rem;
+      color: var(--accent);
+      cursor: pointer;
+      margin-top: 5px;
+      display: inline-block;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+    }
+
+    .toggle-abstract:hover { text-decoration: underline; }
+
+    /* ── Star Rating ── */
+    .rating-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .rating-label {
+      font-size: 0.76rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .stars { display: flex; gap: 3px; }
+
+    .star {
+      font-size: 1.25rem;
+      cursor: pointer;
+      color: var(--star-off);
+      transition: color 0.12s, transform 0.1s;
+      user-select: none;
+      line-height: 1;
+    }
+
+    .star:hover, .star.hovered, .star.selected {
+      color: var(--star-on);
+      transform: scale(1.2);
+    }
+
+    .rating-feedback {
+      font-size: 0.76rem;
+      font-weight: 500;
+      min-width: 90px;
+    }
+
+    .rating-feedback.saving { color: var(--muted); }
+    .rating-feedback.saved  { color: var(--success); }
+    .rating-feedback.error  { color: var(--error); }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 28px;
+      padding-bottom: 40px;
+    }
+
+    .page-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 18px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .page-btn:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .page-info { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 26px;
+      right: 26px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 11px 18px;
+      font-size: 0.84rem;
+      display: none;
+      z-index: 9999;
+    }
+
+    #toast.success { border-left: 4px solid var(--success); color: var(--success); }
+    #toast.error   { border-left: 4px solid var(--error);   color: var(--error); }
+    #toast.info    { border-left: 4px solid var(--accent);  color: var(--accent); }
+
+    .no-results {
+      text-align: center;
+      color: var(--muted);
+      padding: 60px 0;
+      font-size: 0.92rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <h1>📄 arXiv Paper Review</h1>
+    <div class="header-right">
+      <div id="stats">
+        <span id="total-count">0</span> papers loaded
+      </div>
+      <button id="load-btn" onclick="startFetch()">⬇ Load Today's Papers</button>
+      <button id="stop-btn" onclick="stopFetch()">✕ Stop</button>
+    </div>
+  </header>
+
+  <!-- ── Progress bar (shown while streaming) ── -->
+  <div id="progress-wrap">
+    <div id="progress-bar-bg">
+      <div id="progress-bar"></div>
+    </div>
+    <span id="progress-label">Starting...</span>
+  </div>
+
+  <!-- ── Search & Filter controls ── -->
+  <div class="controls">
+    <input type="text" id="search-input" placeholder="🔍  Search by title or keyword..." oninput="handleSearch()" />
+    <select id="filter-rated" onchange="handleSearch()">
+      <option value="all">All Papers</option>
+      <option value="rated">Rated only</option>
+      <option value="unrated">Unrated only</option>
+    </select>
+  </div>
+
+  <main>
+    <!-- Empty state -->
+    <div id="empty-state">
+      <div class="big-icon">🔬</div>
+      <h2>No papers loaded yet</h2>
+      <p>Click <strong>"Load Today's Papers"</strong> to start fetching yesterday's arXiv papers live. They will appear here one by one as they are retrieved.</p>
+    </div>
+
+    <div id="paper-list"></div>
+
+    <div class="pagination" id="pagination" style="display:none">
+      <button class="page-btn" id="prev-btn" onclick="changePage(-1)">← Prev</button>
+      <span class="page-info" id="page-info"></span>
+      <button class="page-btn" id="next-btn" onclick="changePage(1)">Next →</button>
+    </div>
+  </main>
+
+  <div id="toast"></div>
+
+  <script>
+    const API_BASE  = 'http://localhost:5001';
+    const PAGE_SIZE = 20;
+
+    let allPapers   = [];
+    let filtered    = [];
+    let currentPage = 1;
+    let isFetching  = false;
+    let fetchedCount = 0;
+    let activeES    = null;   // holds the active EventSource so stopFetch() can close it
+
+    // ── Load existing papers from DB on page open ─────────────────
+    async function loadExisting() {
+      try {
+        const res  = await fetch(`${API_BASE}/papers`);
+        const data = await res.json();
+        if (!data.success || data.count === 0) return;
+
+        allPapers = data.papers;
+        fetchedCount = allPapers.length;
+        updateCount();
+        handleSearch();
+        document.getElementById('empty-state').style.display = 'none';
+
+      } catch (e) {
+        // API not running yet — that's fine, user will click Load
+      }
+    }
+
+    // ── Shared helper to reset fetch UI state ─────────────────────
+    function resetFetchUI() {
+      isFetching = false;
+      activeES   = null;
+      const loadBtn = document.getElementById('load-btn');
+      const stopBtn = document.getElementById('stop-btn');
+      loadBtn.disabled    = false;
+      loadBtn.textContent = '⬇ Load Today\'s Papers';
+      stopBtn.style.display = 'none';
+      document.getElementById('progress-wrap').classList.remove('visible');
+    }
+
+    // ── Start streaming fetch ─────────────────────────────────────
+    function startFetch() {
+      if (isFetching) return;
+      isFetching = true;
+
+      const loadBtn = document.getElementById('load-btn');
+      const stopBtn = document.getElementById('stop-btn');
+      loadBtn.disabled    = true;
+      loadBtn.textContent = '⏳ Fetching...';
+      stopBtn.style.display = 'inline-block';   // show Stop button
+
+      document.getElementById('empty-state').style.display    = 'none';
+      document.getElementById('progress-wrap').classList.add('visible');
+      document.getElementById('progress-label').textContent   = 'Connecting to arXiv...';
+      document.getElementById('progress-bar').style.width     = '0%';
+
+      showToast('Connecting to arXiv API…', 'info');
+
+      // Store EventSource in module-level var so stopFetch() can close it
+      const es = new EventSource(`${API_BASE}/fetch`);
+      activeES = es;
+
+      es.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+
+        // Final done signal
+        if (data.done) {
+          es.close();
+          resetFetchUI();
+          document.getElementById('progress-bar').style.width = '100%';
+          showToast(`Done! ${data.new} new papers saved, ${data.duplicates} already existed.`, 'success');
+          return;
+        }
+
+        if (data.error) {
+          es.close();
+          resetFetchUI();
+          showToast(`Error: ${data.error}`, 'error');
+          return;
+        }
+
+        // Received a batch of papers — add all to list and re-render once
+        if (data.batch && data.batch.length > 0) {
+          const newPapers = data.batch.filter(p => p.status === 'new');
+
+          // Add new papers to our local list
+          allPapers.push(...newPapers);
+          fetchedCount += newPapers.length;
+
+          // Update progress bar
+          const w = Math.min(95, 5 + data.total_new * 0.05);
+          document.getElementById('progress-bar').style.width = w + '%';
+          document.getElementById('progress-label').textContent =
+            `Batch received: ${data.batch_new} new  |  Total: ${data.total_new} new, ${data.total_dup} duplicates`;
+
+          // Re-render page 1 to show the new batch
+          if (currentPage === 1) {
+            handleSearch();
+          }
+          updateCount();
+        }
+      };
+
+      es.onerror = function() {
+        if (isFetching) {
+          es.close();
+          resetFetchUI();
+          showToast('Connection to API lost. Is api.py running?', 'error');
+        }
+      };
+    }
+
+    // ── Stop streaming fetch ──────────────────────────────────────
+    function stopFetch() {
+      if (!isFetching || !activeES) return;
+      activeES.close();    // closing the EventSource stops the stream
+      resetFetchUI();
+      showToast(`Stopped. ${allPapers.length} papers loaded so far.`, 'info');
+    }
+
+    // ── Filter & Search ───────────────────────────────────────────
+    function handleSearch() {
+      const query       = document.getElementById('search-input').value.toLowerCase();
+      const ratedFilter = document.getElementById('filter-rated').value;
+
+      filtered = allPapers.filter(p => {
+        const matchText  = !query ||
+          (p.title  || '').toLowerCase().includes(query) ||
+          (p.abstract || '').toLowerCase().includes(query);
+
+        const matchRated =
+          ratedFilter === 'all'    ? true :
+          ratedFilter === 'rated'  ? p.rating !== null :
+                                     p.rating === null;
+
+        return matchText && matchRated;
+      });
+
+      currentPage = 1;
+      renderPage();
+    }
+
+    // ── Render current page ───────────────────────────────────────
+    function renderPage() {
+      const list = document.getElementById('paper-list');
+
+      if (filtered.length === 0) {
+        list.innerHTML = allPapers.length > 0
+          ? `<div class="no-results">No papers match your search.</div>`
+          : '';
+        document.getElementById('pagination').style.display = 'none';
+        return;
+      }
+
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const page  = filtered.slice(start, start + PAGE_SIZE);
+      const total = Math.ceil(filtered.length / PAGE_SIZE);
+
+      list.innerHTML = page.map(p => paperCard(p)).join('');
+
+      // Restore saved star selections
+      page.forEach(p => {
+        if (p.rating) setStars(p.link, p.rating);
+      });
+
+      // Pagination controls
+      const pag = document.getElementById('pagination');
+      pag.style.display = filtered.length > PAGE_SIZE ? 'flex' : 'none';
+      document.getElementById('page-info').textContent =
+        `Page ${currentPage} of ${total}  (${filtered.length} papers)`;
+      document.getElementById('prev-btn').disabled = currentPage === 1;
+      document.getElementById('next-btn').disabled = currentPage === total;
+    }
+
+    // ── Update header count ───────────────────────────────────────
+    function updateCount() {
+      document.getElementById('total-count').textContent = allPapers.length;
+    }
+
+    // ── Build paper card HTML ─────────────────────────────────────
+    function paperCard(p) {
+      const id     = linkToId(p.link);
+      const pubDate = p.published
+        ? new Date(p.published).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })
+        : '';
+      const ratedBadge = p.rating
+        ? `<span class="badge rated">★ ${p.rating}/5</span>` : '';
+      const newBadge = p.status === 'new'
+        ? `<span class="badge new-badge">New</span>` : '';
+
+      return `
+        <div class="paper-card" id="card-${id}">
+          <div class="paper-header">
+            <div class="paper-title">
+              <a href="${p.link}" target="_blank" rel="noopener">${p.title}</a>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0">${newBadge}${ratedBadge}</div>
+          </div>
+          <div class="paper-meta">
+            ${pubDate ? `<span>📅 ${pubDate}</span>` : ''}
+            ${p.doi && p.doi !== 'Not Available' ? `<span>DOI: ${p.doi}</span>` : ''}
+            <a href="${p.link}" target="_blank" rel="noopener"
+               style="color:var(--accent2);font-size:0.76rem">arXiv ↗</a>
+          </div>
+          <div class="paper-abstract" id="abs-${id}">${p.abstract || 'No abstract available.'}</div>
+          <button class="toggle-abstract" onclick="toggleAbstract('${id}')">Show more</button>
+          <div class="rating-row">
+            <span class="rating-label">Rate this paper:</span>
+            <div class="stars" id="stars-${id}">
+              ${[1,2,3,4,5].map(n =>
+                `<span class="star" id="star-${id}-${n}"
+                  onmouseenter="hoverStars('${id}',${n})"
+                  onmouseleave="unhoverStars('${id}')"
+                  onclick="submitRating('${encodeURIComponent(p.link)}',${n},'${id}')">★</span>`
+              ).join('')}
+            </div>
+            <span class="rating-feedback" id="feedback-${id}">
+              ${p.rating ? `<span style="color:var(--success)">✓ Saved (${p.rating}/5)</span>` : ''}
+            </span>
+          </div>
+        </div>`;
+    }
+
+    // ── Star interactions ─────────────────────────────────────────
+    function hoverStars(id, n) {
+      for (let i = 1; i <= 5; i++) {
+        const s = document.getElementById(`star-${id}-${i}`);
+        if (s) s.classList.toggle('hovered', i <= n);
+      }
+    }
+
+    function unhoverStars(id) {
+      for (let i = 1; i <= 5; i++) {
+        const s = document.getElementById(`star-${id}-${i}`);
+        if (s) s.classList.remove('hovered');
+      }
+    }
+
+    function setStars(link, rating) {
+      const id = linkToId(link);
+      for (let i = 1; i <= 5; i++) {
+        const s = document.getElementById(`star-${id}-${i}`);
+        if (s) s.classList.toggle('selected', i <= rating);
+      }
+    }
+
+    // ── Submit rating ─────────────────────────────────────────────
+    async function submitRating(encodedLink, rating, id) {
+      const link     = decodeURIComponent(encodedLink);
+      const feedback = document.getElementById(`feedback-${id}`);
+
+      feedback.className   = 'rating-feedback saving';
+      feedback.textContent = 'Saving…';
+      setStars(link, rating);
+
+      try {
+        const res  = await fetch(`${API_BASE}/rate`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ link, rating })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          feedback.className = 'rating-feedback saved';
+          feedback.innerHTML = `<span style="color:var(--success)">✓ Saved (${rating}/5)</span>`;
+          showToast(`Rating ${rating}/5 saved!`, 'success');
+
+          // Update local cache & badge
+          const paper = allPapers.find(p => p.link === link);
+          if (paper) paper.rating = rating;
+
+          const card = document.getElementById(`card-${id}`);
+          if (card) {
+            let badge = card.querySelector('.badge.rated');
+            if (badge) {
+              badge.textContent = `★ ${rating}/5`;
+            } else {
+              badge = document.createElement('span');
+              badge.className   = 'badge rated';
+              badge.textContent = `★ ${rating}/5`;
+              const badgeWrap   = card.querySelector('.paper-header > div:last-child');
+              if (badgeWrap) badgeWrap.appendChild(badge);
+            }
+          }
+        } else {
+          feedback.className   = 'rating-feedback error';
+          feedback.textContent = '✗ Error';
+          showToast(data.message, 'error');
+        }
+      } catch (err) {
+        feedback.className   = 'rating-feedback error';
+        feedback.textContent = '✗ Failed';
+        showToast('Could not connect to API. Is api.py running?', 'error');
+      }
+    }
+
+    // ── Toggle abstract ───────────────────────────────────────────
+    function toggleAbstract(id) {
+      const abs = document.getElementById(`abs-${id}`);
+      const btn = abs.nextElementSibling;
+      abs.classList.toggle('expanded');
+      btn.textContent = abs.classList.contains('expanded') ? 'Show less' : 'Show more';
+    }
+
+    // ── Pagination ────────────────────────────────────────────────
+    function changePage(dir) {
+      currentPage += dir;
+      renderPage();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ── Toast ─────────────────────────────────────────────────────
+    function showToast(msg, type) {
+      const t = document.getElementById('toast');
+      t.textContent   = msg;
+      t.className     = type;
+      t.style.display = 'block';
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => { t.style.display = 'none'; }, 3000);
+    }
+
+    // ── Utility: link → safe DOM id ───────────────────────────────
+    function linkToId(link) {
+      return (link || '').replace(/[^a-zA-Z0-9]/g, '_');
+    }
+
+    // ── Init ──────────────────────────────────────────────────────
+    loadExisting();  // Auto-load any papers already in the DB
+  </script>
+</body>
+</html>

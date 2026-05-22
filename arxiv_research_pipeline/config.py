@@ -1,4 +1,4 @@
-MONGO_URI = "mongodb+srv://Jaya:Jaya@321@cluster0.fyu6dbb.mongodb.net/"
+MONGO_URI = "mongodb+srv://paperdocs:paperdocs123456789@cluster0.sgwdivg.mongodb.net/?appName=Cluster0"
 DATABASE_NAME = "research_papers"
 COLLECTION_NAME = "papers"
 
