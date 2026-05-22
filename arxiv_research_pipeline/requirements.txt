@@ -1,0 +1,7 @@
+requests
+pymongo
+pandas
+feedparser
+apscheduler
+python-dotenv
+certifi
