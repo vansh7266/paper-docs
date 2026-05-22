@@ -6,4 +6,4 @@ apscheduler
 python-dotenv
 certifi
 flask
-flask-cors
+flask-corspython-dotenv

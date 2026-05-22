@@ -1,4 +1,9 @@
-MONGO_URI = "mongodb+srv://paperdocs:paperdocs123456789@cluster0.sgwdivg.mongodb.net/?appName=Cluster0"
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 DATABASE_NAME = "research_papers"
 COLLECTION_NAME = "papers"
 
