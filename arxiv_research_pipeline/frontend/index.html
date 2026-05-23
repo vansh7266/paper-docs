@@ -1659,24 +1659,7 @@ closing of this preservation comment.
 </head>
 <body>
 
-  <!-- Firebase Auth Configuration -->
-  <script>
-    // ============================================================
-    // GOOGLE FIREBASE CONFIGURATION ACTIVE
-    // Initialized for Moleculyst Research Team Hub
-    // ============================================================
-    const firebaseConfig = {
-      apiKey: "AIzaSyA0ptPrQZeg9yUJMBMsNvFcbdn4zdLxaOc",
-      authDomain: "moleculyst-research-hub.firebaseapp.com",
-      projectId: "moleculyst-research-hub",
-      storageBucket: "moleculyst-research-hub.firebasestorage.app",
-      messagingSenderId: "810784200725",
-      appId: "1:810784200725:web:10d7078435a8447102961c"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-  </script>
+  <!-- Firebase Auth Configuration dynamically initialized from secure backend GET /firebase-config -->
 
   <!-- ── Landing Authentication Screen Overlay ── -->
   <div id="login-overlay">
@@ -1888,8 +1871,21 @@ closing of this preservation comment.
     let allPapers = [];
     let filtered = [];
 
-    // Check user session on startup
-    document.addEventListener("DOMContentLoaded", () => {
+    // Check user session and initialize Firebase dynamically on startup
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        // Fetch Firebase configuration securely from backend (no hardcoded keys in github!)
+        const res = await fetch(`${API_BASE}/firebase-config`);
+        const config = await res.json();
+        
+        if (config && config.apiKey && typeof firebase !== 'undefined') {
+          firebase.initializeApp(config);
+          console.log("Firebase initialized dynamically with secure server-provided keys.");
+        }
+      } catch (e) {
+        console.warn("Could not load Firebase configuration from backend. Local/fallback auth will be active.", e);
+      }
+
       const savedUser = localStorage.getItem("arxiv_username");
       if (savedUser) {
         completeAuthSession(savedUser);
