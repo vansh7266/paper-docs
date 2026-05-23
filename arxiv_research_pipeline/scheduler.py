@@ -8,8 +8,8 @@ scheduler = BlockingScheduler(timezone="Asia/Kolkata")
 # scheduler.add_job(run_pipeline, 'cron', hour=1, minute=30)
 # ============================================================
 
-# NEW SCHEDULE - 6:00 AM IST (fetch yesterday's papers every morning)
-scheduler.add_job(run_pipeline, 'cron', hour=6, minute=0)
+# NEW SCHEDULE - 6:00 AM IST (fetch yesterday's papers every morning) - COMMENTED OUT FOR MANUAL-ONLY FLOW
+# scheduler.add_job(run_pipeline, 'cron', hour=6, minute=0)
 
 print("Scheduler started. Pipeline runs daily at 6:00 AM IST.")
 

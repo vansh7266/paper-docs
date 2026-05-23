@@ -11,6 +11,7 @@
 **/ENV/
 **/env.bak/
 **/venv.bak/
+**/venv_mac/
 
 # IDEs and OS files
 .vscode/

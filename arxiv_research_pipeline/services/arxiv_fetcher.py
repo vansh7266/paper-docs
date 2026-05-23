@@ -1,6 +1,6 @@
 import requests
 import feedparser
-import time
+import time  # used in fetch_with_retry backoff
 from datetime import datetime, timedelta
 
 
@@ -58,10 +58,105 @@ from datetime import datetime, timedelta
 # with Retry & Exponential Backoff to handle arXiv rate limits
 # ============================================================
 
-MAX_RESULTS_PER_REQUEST = 100  # arXiv recommends <= 100 per request
+# ============================================================
+# NEW CODE - Fetch ALL of yesterday's papers (no category filter)
+# with Retry & Exponential Backoff to handle arXiv rate limits
+# ============================================================
 
+# def fetch_with_retry(url, retries=5, backoff_factor=3, timeout=120):
+#     """
+#     Perform a GET request with retries and exponential backoff to handle
+#     transient network errors, timeouts, or 429 Rate Limits from arXiv.
+#     Timeout is 120s to accommodate large single-request responses.
+#     """
+#     for i in range(retries):
+#         try:
+#             print(f"Sending request (attempt {i+1}/{retries})...")
+#             response = requests.get(url, timeout=timeout)
+# 
+#             if response.status_code == 200:
+#                 return response
+# 
+#             print(f"Received status code {response.status_code} from arXiv API.")
+# 
+#         except requests.exceptions.RequestException as e:
+#             print(f"Request failed: {e}")
+# 
+#         delay = backoff_factor * (2 ** i)
+#         print(f"Waiting {delay}s before retrying...")
+#         time.sleep(delay)
+# 
+#     return None
+# 
+# 
+# def _fetch_for_date(target_date):
+#     date_str  = target_date.strftime("%Y%m%d")
+#     date_from = f"{date_str}0000"
+#     date_to   = f"{date_str}2359"
+# 
+#     print(f"Trying date: {target_date.strftime('%Y-%m-%d')} ...")
+# 
+#     url = (
+#         "https://export.arxiv.org/api/query?"
+#         f"search_query=submittedDate:[{date_from}+TO+{date_to}]&"
+#         "start=0&"
+#         "max_results=10000&"
+#         "sortBy=submittedDate&sortOrder=descending"
+#     )
+# 
+#     response = fetch_with_retry(url)
+#     if response is None:
+#         return []
+# 
+#     feed   = feedparser.parse(response.text)
+#     papers = []
+# 
+#     for entry in feed.entries:
+#         papers.append({
+#             "doi":    entry.link.split('/abs/')[-1],  # e.g. 2605.22821v1
+#             "rating": None
+#         })
+# 
+#     return papers
+# 
+# 
+# def fetch_yesterdays_papers():
+#     """
+#     Fetch ALL papers submitted to arXiv in a single request (max_results=10000).
+#     Tries yesterday first; falls back to 2 days ago if arXiv's index hasn't
+#     caught up yet (the search index typically lags by ~1 day).
+#     """
+#     print("\nFetching ALL arXiv papers — single request, no pagination, no category filter.\n")
+# 
+#     for days_back in [1, 2]:
+#         target = datetime.utcnow() - timedelta(days=days_back)
+#         papers = _fetch_for_date(target)
+#         if papers:
+#             print(f"Total papers fetched for {target.strftime('%Y-%m-%d')}: {len(papers)}")
+#             return papers
+#         print(f"No papers indexed yet for {target.strftime('%Y-%m-%d')}, trying one day earlier...")
+# 
+#     print("No papers found for the last 2 days.")
+#     return []
+# 
+# 
+# def stream_yesterdays_papers_batched():
+#     """
+#     Fetches all of yesterday's papers in one request and yields them as a
+#     single batch so the frontend receives everything at once via SSE.
+#     """
+#     papers = fetch_yesterdays_papers()
+#     if papers:
+#         yield papers
 
-def fetch_with_retry(url, retries=5, backoff_factor=3, timeout=30):
+# ============================================================
+# UPGRADED CODE - Fetch papers with FULL METADATA preserved
+# and support for single paper fetching by URL or ID.
+# ============================================================
+
+import re
+
+def fetch_with_retry(url, retries=5, backoff_factor=3, timeout=120):
     """
     Perform a GET request with retries and exponential backoff to handle
     transient network errors, timeouts, or 429 Rate Limits from arXiv.
@@ -86,132 +181,165 @@ def fetch_with_retry(url, retries=5, backoff_factor=3, timeout=30):
     return None
 
 
+def extract_arxiv_id(identifier):
+    """
+    Extract arXiv ID from a string which could be a full URL, partial URL, or plain ID.
+    Supports formats:
+      - https://arxiv.org/abs/2405.12345v1
+      - https://arxiv.org/pdf/2405.12345.pdf
+      - arXiv:2405.12345
+      - 2405.12345v1
+    """
+    # Look for standard pattern: e.g. 2405.12345 or 2405.12345v1 or 2405.12345v2
+    # Standard format: YYMM.NNNNN
+    match = re.search(r'(?:arxiv\.org/(?:abs|pdf|html|src)/|arxiv:)?([0-9]+\.[0-9]+(?:v[0-9]+)?)', identifier, re.IGNORECASE)
+    if match:
+        return match.group(1)
+    
+    # Fallback to general pattern search
+    match_direct = re.search(r'([0-9]+\.[0-9]+(?:v[0-9]+)?)', identifier)
+    if match_direct:
+        return match_direct.group(1)
+        
+    return identifier.strip()
+
+
+def clean_text(text):
+    """Clean newlines and duplicate spaces from title/summary."""
+    if not text:
+        return ""
+    return " ".join(text.split())
+
+
+def _fetch_for_date(target_date):
+    date_str  = target_date.strftime("%Y%m%d")
+    date_from = f"{date_str}0000"
+    date_to   = f"{date_str}2359"
+
+    print(f"Trying date: {target_date.strftime('%Y-%m-%d')} ...")
+
+    url = (
+        "https://export.arxiv.org/api/query?"
+        f"search_query=submittedDate:[{date_from}+TO+{date_to}]&"
+        "start=0&"
+        "max_results=10000&"
+        "sortBy=submittedDate&sortOrder=descending"
+    )
+
+    response = fetch_with_retry(url)
+    if response is None:
+        return []
+
+    feed   = feedparser.parse(response.text)
+    papers = []
+
+    for entry in feed.entries:
+        doi_val = entry.link.split('/abs/')[-1]
+        papers.append({
+            "doi":       doi_val,
+            "title":     clean_text(entry.title),
+            "link":      entry.link,
+            "published": entry.published,
+            "deleted":   False,
+            "starred":   False,
+            "ratings":   []
+        })
+
+    return papers
+
+
 def fetch_yesterdays_papers():
     """
-    Fetch ALL papers submitted to arXiv yesterday — across all fields/categories.
-    No category filtering applied. Paginates through all results.
-    Returns a list of dicts: title, abstract, published, doi, link, rating.
+    Fetch ALL papers submitted to arXiv in a single request (max_results=10000).
+    Tries yesterday first; falls back to 2 days ago if arXiv's index hasn't caught up.
+    Integrates check_crawl_exists and log_successful_crawl to prevent double fetching globally.
     """
-    yesterday  = datetime.utcnow() - timedelta(days=1)
-    date_str   = yesterday.strftime("%Y%m%d")
-    date_from  = f"{date_str}0000"
-    date_to    = f"{date_str}2359"
+    from database.mongodb import check_crawl_exists, log_successful_crawl
 
-    all_papers = []
-    start      = 0
+    print("\nFetching ALL arXiv papers with full metadata.\n")
 
-    print(f"\nFetching ALL arXiv papers submitted on: {yesterday.strftime('%Y-%m-%d')}")
-    print("No category filter — fetching from all fields.\n")
+    all_already_crawled = True
 
-    while True:
-        # Date-only query with no category restriction
-        url = (
-            "https://export.arxiv.org/api/query?"
-            f"search_query=submittedDate:[{date_from}+TO+{date_to}]&"
-            f"start={start}&"
-            f"max_results={MAX_RESULTS_PER_REQUEST}&"
-            "sortBy=submittedDate&sortOrder=descending"
-        )
+    for days_back in [1, 2]:
+        target = datetime.utcnow() - timedelta(days=days_back)
+        target_str = target.strftime("%Y-%m-%d")
 
-        print(f"Fetching batch starting at index {start}...")
-        response = fetch_with_retry(url)
+        if check_crawl_exists(target_str):
+            print(f"Crawl for {target_str} already exists globally in MongoDB. Skipping.")
+            continue
 
-        if response is None:
-            print("Failed to fetch from arXiv after all retries. Stopping.")
-            break
+        all_already_crawled = False
+        papers = _fetch_for_date(target)
+        if papers:
+            print(f"Total papers fetched for {target.strftime('%Y-%m-%d')}: {len(papers)}")
+            log_successful_crawl(target_str)
+            return papers
+        print(f"No papers indexed yet for {target.strftime('%Y-%m-%d')}, trying one day earlier...")
 
-        feed    = feedparser.parse(response.text)
-        entries = feed.entries
+    if all_already_crawled:
+        print("All potential dates have already been successfully crawled globally.")
+        return "ALREADY_CRAWLED"
 
-        print(f"Entries returned: {len(entries)}")
-
-        if not entries:
-            print("No more entries. Fetch complete.")
-            break
-
-        for entry in entries:
-            paper = {
-                "title":     entry.title,
-                "abstract":  entry.summary,
-                "published": entry.published,
-                "doi":       entry.get("arxiv_doi", "Not Available"),
-                "link":      entry.link,
-                "rating":    None   # Set by team via the rating API
-            }
-            all_papers.append(paper)
-
-        # If fewer entries than requested, we've reached the last page
-        if len(entries) < MAX_RESULTS_PER_REQUEST:
-            print("Last page reached. All papers retrieved.")
-            break
-
-        start += MAX_RESULTS_PER_REQUEST
-
-        # arXiv recommends 3 seconds between requests
-        print("Waiting 3s before next batch (arXiv rate limit policy)...")
-        time.sleep(3)
-
-    print(f"\nTotal papers fetched for {yesterday.strftime('%Y-%m-%d')}: {len(all_papers)}")
-    return all_papers
+    print("No papers found for the last 2 days.")
+    return []
 
 
-def stream_yesterdays_papers_batched():
+def stream_yesterdays_papers_batched(date_str=None):
     """
-    Batch generator version of the fetcher.
-    Yields one LIST of papers per arXiv API call (e.g. 100 papers at a time).
-    The entire batch is sent to the frontend at once so papers appear in groups,
-    not one by one. This is faster and less noisy in the UI.
+    Yields all fetched papers as a single batch for frontend SSE consumption.
+    If date_str (YYYY-MM-DD) is provided, crawls that specific date only.
+    Handles the 'ALREADY_CRAWLED' lock globally.
     """
-    yesterday  = datetime.utcnow() - timedelta(days=1)
-    date_str   = yesterday.strftime("%Y%m%d")
-    date_from  = f"{date_str}0000"
-    date_to    = f"{date_str}2359"
-    start      = 0
-
-    print(f"\n[STREAM] Fetching all arXiv papers for {yesterday.strftime('%Y-%m-%d')} (all fields)...")
-
-    while True:
-        url = (
-            "https://export.arxiv.org/api/query?"
-            f"search_query=submittedDate:[{date_from}+TO+{date_to}]&"
-            f"start={start}&"
-            f"max_results={MAX_RESULTS_PER_REQUEST}&"
-            "sortBy=submittedDate&sortOrder=descending"
-        )
-
-        print(f"[STREAM] Fetching batch at index {start}...")
-        response = fetch_with_retry(url)
-
-        if response is None:
-            print("[STREAM] Failed after all retries. Stopping.")
+    if date_str:
+        from database.mongodb import check_crawl_exists, log_successful_crawl
+        if check_crawl_exists(date_str):
+            yield "ALREADY_CRAWLED"
             return
+        try:
+            target = datetime.strptime(date_str, "%Y-%m-%d")
+            papers = _fetch_for_date(target)
+            if papers:
+                log_successful_crawl(date_str)
+                yield papers
+            else:
+                yield []
+        except Exception as e:
+            print(f"Error fetching for date {date_str}: {e}")
+            yield []
+    else:
+        papers = fetch_yesterdays_papers()
+        if papers == "ALREADY_CRAWLED":
+            yield "ALREADY_CRAWLED"
+        elif papers:
+            yield papers
 
-        feed    = feedparser.parse(response.text)
-        entries = feed.entries
 
-        print(f"[STREAM] Got {len(entries)} entries in this batch.")
+def fetch_single_arxiv_paper(identifier):
+    """
+    Fetches full metadata for a single arXiv paper by ID, URL, or DOI.
+    Returns the parsed paper dict or None if not found/error.
+    """
+    arxiv_id = extract_arxiv_id(identifier)
+    print(f"Fetching single arXiv paper. Input: '{identifier}' | Extracted ID: '{arxiv_id}'")
 
-        if not entries:
-            print("[STREAM] No entries. Done.")
-            return
+    url = f"https://export.arxiv.org/api/query?id_list={arxiv_id}"
+    response = fetch_with_retry(url)
+    if response is None:
+        print("Failed to fetch from arXiv API.")
+        return None
 
-        # Build the full batch list and yield it all at once
-        batch = []
-        for entry in entries:
-            batch.append({
-                "title":     entry.title,
-                "abstract":  entry.summary,
-                "published": entry.published,
-                "doi":       entry.get("arxiv_doi", "Not Available"),
-                "link":      entry.link,
-                "rating":    None
-            })
+    feed = feedparser.parse(response.text)
+    if not feed.entries:
+        print(f"No papers found on arXiv matching ID: {arxiv_id}")
+        return None
 
-        yield batch   # <-- entire batch of 100 papers at once
-
-        if len(entries) < MAX_RESULTS_PER_REQUEST:
-            print("[STREAM] Last page reached.")
-            return
-
-        start += MAX_RESULTS_PER_REQUEST
-        time.sleep(3)  # arXiv rate limit policy
+    entry = feed.entries[0]
+    return {
+        "doi":       entry.link.split('/abs/')[-1],
+        "title":     clean_text(entry.title),
+        "link":      entry.link,
+        "published": entry.published,
+        "deleted":   False,
+        "starred":   False,
+        "ratings":   []
+    }
