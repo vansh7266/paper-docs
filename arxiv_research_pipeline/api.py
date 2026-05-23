@@ -138,7 +138,7 @@
 
 import json
 import os
-from flask import Flask, jsonify, request, Response, stream_with_context
+from flask import Flask, jsonify, request, Response, stream_with_context, send_from_directory
 from flask_cors import CORS
 
 from database.mongodb import (
@@ -159,6 +159,15 @@ from services.arxiv_fetcher import stream_yesterdays_papers_batched, fetch_singl
 
 app = Flask(__name__)
 CORS(app)  # Allow requests from the frontend (HTML/JS)
+
+
+# ============================================================
+# GET /
+# Serves the static frontend index.html page at root
+# ============================================================
+@app.route("/", methods=["GET"])
+def serve_index():
+    return send_from_directory("frontend", "index.html")
 
 
 # Helper to retrieve a paper's title by DOI (short ID) from MongoDB
