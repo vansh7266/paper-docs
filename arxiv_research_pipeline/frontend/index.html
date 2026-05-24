@@ -2172,6 +2172,13 @@ closing of this preservation comment.
       const query = document.getElementById('search-input').value.toLowerCase();
       const ratedFilter = document.getElementById('filter-rated').value;
 
+      // Ensure allPapers is sorted descending by publication date (newest preprints on top)
+      allPapers.sort((a, b) => {
+        const dateA = a.published ? new Date(a.published) : new Date(0);
+        const dateB = b.published ? new Date(b.published) : new Date(0);
+        return dateB - dateA;
+      });
+
       filtered = allPapers.filter(p => {
         const matchText = !query || (p.title || '').toLowerCase().includes(query);
 
