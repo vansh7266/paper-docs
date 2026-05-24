@@ -2115,7 +2115,7 @@ closing of this preservation comment.
           <button id="tab-active" class="tab-btn active" onclick="switchTab('active')">
             📰 Active Feed
           </button>
-          <button id="tab-my-assignments" class="tab-btn" onclick="switchTab('my-assignments')">
+          <button id="tab-my-assignments" class="tab-btn user-only" onclick="switchTab('my-assignments')">
             📌 My Assignments
           </button>
           <button id="tab-starred" class="tab-btn" onclick="switchTab('starred')">
@@ -2420,6 +2420,11 @@ closing of this preservation comment.
         elem.style.display = isAdmin ? 'inline-block' : 'none';
       });
 
+      // Control User-only tabs visibility
+      document.querySelectorAll('.user-only').forEach(elem => {
+        elem.style.display = isAdmin ? 'none' : 'inline-block';
+      });
+
       const userEmail = email || localStorage.getItem("arxiv_email") || "";
       // Dynamically register user in backend database
       if (userEmail) {
@@ -2650,25 +2655,61 @@ closing of this preservation comment.
         const data = await res.json();
         
         if (data.success) {
-          const users = data.users || [];
-          document.getElementById('team-count-badge').textContent = users.length;
+          const dynamicUsers = data.users || [];
+          
+          // Predefined primary team members from your Firebase project
+          const defaultTeam = [
+            { username: "Amit", email: "amit.career9632@gmail.com", last_active: null },
+            { username: "Vansh Gupta", email: "vanshgupta7266@gmail.com", last_active: null },
+            { username: "Vignesh Skanda", email: "agvskanda@gmail.com", last_active: null },
+            { username: "Chaitanya Rajesh", email: "chaitanyarajeshh@gmail.com", last_active: null },
+            { username: "Vaishnavi Srivastava", email: "vaishnavi.aeuc@gmail.com", last_active: null },
+            { username: "Jaya Rai", email: "jayarai625@gmail.com", last_active: null },
+            { username: "Priyansh Agarwal", email: "agarwalpriyansh384@gmail.com", last_active: null }
+          ];
+
+          // Map by lowercased email for instant lookup & merge
+          const teamMap = new Map();
+          defaultTeam.forEach(member => teamMap.set(member.email.toLowerCase(), member));
+
+          // Merge dynamic sessions
+          dynamicUsers.forEach(u => {
+            const emailKey = (u.email || "").toLowerCase();
+            if (teamMap.has(emailKey)) {
+              const member = teamMap.get(emailKey);
+              member.last_active = u.last_active;
+              if (u.username) member.username = u.username;
+            } else {
+              teamMap.set(emailKey, {
+                username: u.username || u.email.split('@')[0],
+                email: u.email,
+                last_active: u.last_active
+              });
+            }
+          });
+
+          const mergedUsers = Array.from(teamMap.values());
+
+          // Sort: active sessions first (newest first), then alphabetical order
+          mergedUsers.sort((a, b) => {
+            if (a.last_active && b.last_active) {
+              return new Date(b.last_active) - new Date(a.last_active);
+            }
+            if (a.last_active) return -1;
+            if (b.last_active) return 1;
+            return a.username.localeCompare(b.username);
+          });
+
+          document.getElementById('team-count-badge').textContent = mergedUsers.length;
           
           const tbody = document.getElementById('team-table-body');
           if (tbody) {
-            if (users.length === 0) {
-              tbody.innerHTML = `
-                <tr>
-                  <td colspan="3" style="text-align:center; padding: 30px; color:var(--muted); font-size:0.78rem;">
-                    No team members dynamically registered yet. Users are automatically added when they log in!
-                  </td>
-                </tr>`;
-              return;
-            }
-            
-            tbody.innerHTML = users.map(u => {
+            tbody.innerHTML = mergedUsers.map(u => {
               const initials = getInitials(u.username);
               const avatarBg = getAvatarColor(u.username);
-              const activeTime = formatIsoTime(u.last_active);
+              const activeTime = u.last_active 
+                ? `🕒 ${formatIsoTime(u.last_active)}` 
+                : `⚪ Offline`;
               
               return `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.2s;">
@@ -2679,8 +2720,8 @@ closing of this preservation comment.
                   <td style="padding: 12px 8px; color:var(--muted); font-weight:500;">
                     ${escapeHtml(u.email)}
                   </td>
-                  <td style="padding: 12px 8px; color:var(--accent2); font-weight:500;">
-                    🕒 ${activeTime}
+                  <td style="padding: 12px 8px; color:${u.last_active ? 'var(--accent2)' : 'var(--muted)'}; font-weight:500;">
+                    ${activeTime}
                   </td>
                 </tr>`;
             }).join('');
@@ -3712,7 +3753,7 @@ closing of this preservation comment.
     }
 
     // ── Predefined falling back researchers list ──
-    let teamUsers = ["Amit", "Vansh Gupta", "Vignesh Skanda", "Chaitanya Rajesh"];
+    let teamUsers = ["Amit", "Vansh Gupta", "Vignesh Skanda", "Chaitanya Rajesh", "Vaishnavi Srivastava", "Jaya Rai", "Priyansh Agarwal"];
 
     async function fetchTeamUsers() {
       try {
