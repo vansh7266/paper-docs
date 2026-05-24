@@ -2041,6 +2041,172 @@ closing of this preservation comment.
     .admin-assign-btn:active {
       transform: translateY(0);
     }
+
+    /* ── Responsive Mobile Media Queries ── */
+    @media (max-width: 900px) {
+      header {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        gap: 10px;
+      }
+      .brand-wrap {
+        order: 1;
+        flex: 1;
+      }
+      .header-right {
+        order: 2;
+        margin-left: auto;
+      }
+      .header-center {
+        order: 3;
+        width: 100%;
+        margin-top: 6px;
+        display: flex;
+        justify-content: center;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
+      }
+      .nav-tabs {
+        display: flex;
+        overflow-x: auto;
+        white-space: nowrap;
+        width: 100%;
+        border-radius: 8px;
+        -ms-overflow-style: none; /* Hide IE scrollbars */
+        scrollbar-width: none; /* Hide Firefox scrollbars */
+      }
+      .nav-tabs::-webkit-scrollbar {
+        display: none; /* Hide Chrome/Safari scrollbars */
+      }
+      .tab-btn {
+        padding: 6px 12px;
+        font-size: 0.76rem;
+        flex-shrink: 0;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .app-container {
+        padding: 12px 14px;
+        gap: 12px;
+      }
+      
+      .sub-bar {
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .add-paper-form {
+        max-width: 100%;
+        width: 100%;
+      }
+      .feed-controls {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      
+      #search-filter-controls {
+        flex-direction: column;
+        gap: 8px;
+      }
+      #search-filter-controls input {
+        width: 100%;
+      }
+      #search-filter-controls select {
+        width: 100%;
+      }
+
+      .paper-card {
+        padding: 12px 16px;
+      }
+      .card-top-row {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .card-badges {
+        justify-content: space-between;
+        width: 100%;
+      }
+      .paper-title {
+        font-size: 0.88rem;
+      }
+      .paper-meta {
+        gap: 8px;
+        font-size: 0.7rem;
+        margin-bottom: 10px;
+      }
+
+      .card-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .rating-row {
+        justify-content: space-between;
+        width: 100%;
+      }
+      .multi-user-ratings-box {
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .card-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        width: 100%;
+      }
+      
+      /* Admin assignment panel mobile adjustments */
+      .admin-assign-inputs {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .admin-assign-select, 
+      .admin-assign-msg-input, 
+      .admin-assign-btn {
+        width: 100%;
+        flex: none;
+      }
+      
+      /* Table directory mobile padding */
+      #team-table th, #team-table td {
+        padding: 8px 4px !important;
+        font-size: 0.72rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .login-card {
+        width: 100%;
+        max-width: 340px;
+        padding: 24px 20px;
+        margin: 0 16px;
+        box-sizing: border-box;
+      }
+      .login-card h2 {
+        font-size: 1.2rem;
+      }
+      .brand-title {
+        font-size: 0.95rem;
+      }
+      .brand-wrap svg {
+        width: 24px;
+        height: 24px;
+      }
+      .comments-drawer {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+    }
   </style>
 
   <!-- Firebase Compat CDN -->
