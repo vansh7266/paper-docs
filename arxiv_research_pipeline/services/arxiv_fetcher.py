@@ -211,52 +211,72 @@ def clean_text(text):
     return " ".join(text.split())
 
 
-def _fetch_for_date(target_date):
+def _fetch_for_date_generator(target_date, batch_size=200):
+    """
+    Queries arXiv using pagination to fetch all papers for a specific date in batches.
+    Yields each batch of papers to keep downstream streaming connections active and prevent timeouts.
+    """
     date_str  = target_date.strftime("%Y%m%d")
     date_from = f"{date_str}0000"
     date_to   = f"{date_str}2359"
 
-    print(f"Trying date: {target_date.strftime('%Y-%m-%d')} ...")
+    print(f"Initiating paginated crawl for date: {target_date.strftime('%Y-%m-%d')} ...")
 
-    url = (
-        "https://export.arxiv.org/api/query?"
-        f"search_query=submittedDate:[{date_from}+TO+{date_to}]&"
-        "start=0&"
-        "max_results=10000&"
-        "sortBy=submittedDate&sortOrder=descending"
-    )
+    start = 0
+    while True:
+        url = (
+            "https://export.arxiv.org/api/query?"
+            f"search_query=submittedDate:[{date_from}+TO+{date_to}]&"
+            f"start={start}&"
+            f"max_results={batch_size}&"
+            "sortBy=submittedDate&sortOrder=descending"
+        )
 
-    response = fetch_with_retry(url)
-    if response is None:
-        return []
+        print(f"Fetching start={start}, max_results={batch_size} from arXiv...")
+        response = fetch_with_retry(url)
+        if response is None:
+            print("Failed to fetch batch from arXiv. Terminating paginated crawl.")
+            break
 
-    feed   = feedparser.parse(response.text)
-    papers = []
+        feed = feedparser.parse(response.text)
+        if not feed.entries:
+            print("No entries returned in this batch. Crawl finished.")
+            break
 
-    for entry in feed.entries:
-        doi_val = entry.link.split('/abs/')[-1]
-        papers.append({
-            "doi":       doi_val,
-            "title":     clean_text(entry.title),
-            "link":      entry.link,
-            "published": entry.published,
-            "deleted":   False,
-            "starred":   False,
-            "ratings":   []
-        })
+        papers = []
+        for entry in feed.entries:
+            doi_val = entry.link.split('/abs/')[-1]
+            papers.append({
+                "doi":       doi_val,
+                "title":     clean_text(entry.title),
+                "link":      entry.link,
+                "published": entry.published,
+                "deleted":   False,
+                "starred":   False,
+                "ratings":   []
+            })
 
-    return papers
+        yield papers
+
+        # If we got fewer results than requested, we have reached the end of the day's submissions
+        if len(feed.entries) < batch_size:
+            print(f"Reached final page (fetched {len(feed.entries)} papers, which is less than batch size {batch_size}).")
+            break
+
+        start += batch_size
+        print("Sleeping 3 seconds to respect arXiv's rate-limiting policy...")
+        time.sleep(3)
 
 
 def fetch_yesterdays_papers():
     """
-    Fetch ALL papers submitted to arXiv in a single request (max_results=10000).
+    Fetch ALL papers submitted to arXiv in successive pages and return as a single list.
     Tries yesterday first; falls back to 2 days ago if arXiv's index hasn't caught up.
     Integrates check_crawl_exists and log_successful_crawl to prevent double fetching globally.
     """
     from database.mongodb import check_crawl_exists, log_successful_crawl
 
-    print("\nFetching ALL arXiv papers with full metadata.\n")
+    print("\nFetching ALL arXiv papers with full metadata using pagination.\n")
 
     all_already_crawled = True
 
@@ -269,7 +289,11 @@ def fetch_yesterdays_papers():
             continue
 
         all_already_crawled = False
-        papers = _fetch_for_date(target)
+        papers = []
+        for batch in _fetch_for_date_generator(target):
+            if batch:
+                papers.extend(batch)
+
         if papers:
             print(f"Total papers fetched for {target.strftime('%Y-%m-%d')}: {len(papers)}")
             log_successful_crawl(target_str)
@@ -286,32 +310,53 @@ def fetch_yesterdays_papers():
 
 def stream_yesterdays_papers_batched(date_str=None):
     """
-    Yields all fetched papers as a single batch for frontend SSE consumption.
+    Yields fetched papers in paginated batches for frontend SSE consumption.
     If date_str (YYYY-MM-DD) is provided, crawls that specific date only.
     Handles the 'ALREADY_CRAWLED' lock globally.
     """
+    from database.mongodb import check_crawl_exists, log_successful_crawl
+
     if date_str:
-        from database.mongodb import check_crawl_exists, log_successful_crawl
         if check_crawl_exists(date_str):
             yield "ALREADY_CRAWLED"
             return
         try:
             target = datetime.strptime(date_str, "%Y-%m-%d")
-            papers = _fetch_for_date(target)
-            if papers:
+            total_papers = 0
+            for batch in _fetch_for_date_generator(target):
+                if batch:
+                    total_papers += len(batch)
+                    yield batch
+            
+            if total_papers > 0:
                 log_successful_crawl(date_str)
-                yield papers
             else:
                 yield []
         except Exception as e:
             print(f"Error fetching for date {date_str}: {e}")
             yield []
     else:
-        papers = fetch_yesterdays_papers()
-        if papers == "ALREADY_CRAWLED":
+        all_already_crawled = True
+        for days_back in [1, 2]:
+            target = datetime.utcnow() - timedelta(days=days_back)
+            target_str = target.strftime("%Y-%m-%d")
+
+            if check_crawl_exists(target_str):
+                continue
+
+            all_already_crawled = False
+            total_papers = 0
+            for batch in _fetch_for_date_generator(target):
+                if batch:
+                    total_papers += len(batch)
+                    yield batch
+            
+            if total_papers > 0:
+                log_successful_crawl(target_str)
+                return
+            
+        if all_already_crawled:
             yield "ALREADY_CRAWLED"
-        elif papers:
-            yield papers
 
 
 def fetch_single_arxiv_paper(identifier):

@@ -17,5 +17,5 @@ COPY arxiv_research_pipeline/ .
 # Expose the default port Hugging Face Spaces expects (7860)
 EXPOSE 7860
 
-# Start Flask via Gunicorn bound to port 7860
-CMD ["gunicorn", "--bind", "0.0.0.0:7860", "api:app"]
+# Start Flask via Gunicorn bound to port 7860 with 300 seconds worker timeout
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--timeout", "300", "api:app"]
