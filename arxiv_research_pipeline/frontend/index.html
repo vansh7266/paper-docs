@@ -1923,6 +1923,124 @@ closing of this preservation comment.
       from { opacity: 0; }
       to   { opacity: 1; }
     }
+
+    /* ── Glowing glassmorphic assignment banner ── */
+    .assignment-banner {
+      background: linear-gradient(90deg, rgba(32, 164, 159, 0.12) 0%, rgba(32, 164, 159, 0.02) 100%);
+      border-left: 3.5px solid var(--accent);
+      border-top: 1px solid rgba(32, 164, 159, 0.2);
+      border-right: 1px solid rgba(32, 164, 159, 0.08);
+      border-bottom: 1px solid rgba(32, 164, 159, 0.08);
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      font-size: 0.74rem;
+      line-height: 1.4;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2), 0 0 15px rgba(32, 164, 159, 0.08);
+      animation: fadeIn 0.4s ease;
+    }
+    .assignment-banner-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .assignment-banner-msg {
+      color: var(--text);
+      font-style: italic;
+      margin-top: 6px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.76rem;
+    }
+
+    /* ── Admin assignment controls ── */
+    .admin-assign-panel {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+    .admin-assign-panel-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .admin-assign-inputs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .admin-assign-select {
+      flex: 1;
+      font-size: 0.76rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      padding: 7px 10px;
+      background: rgba(10, 12, 24, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      outline: none;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .admin-assign-select:focus {
+      border-color: var(--accent);
+      background: rgba(10, 12, 24, 0.8);
+      box-shadow: 0 0 8px rgba(32, 164, 159, 0.3);
+    }
+    .admin-assign-msg-input {
+      flex: 2;
+      font-size: 0.76rem;
+      font-family: 'Outfit', sans-serif;
+      padding: 7px 10px;
+      background: rgba(10, 12, 24, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      outline: none;
+      transition: all 0.2s;
+    }
+    .admin-assign-msg-input:focus {
+      border-color: var(--accent);
+      background: rgba(10, 12, 24, 0.8);
+      box-shadow: 0 0 8px rgba(32, 164, 159, 0.3);
+    }
+    .admin-assign-btn {
+      padding: 7px 14px;
+      font-size: 0.76rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      background: var(--accent);
+      color: #0c0e18;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .admin-assign-btn:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(32, 164, 159, 0.4);
+    }
+    .admin-assign-btn:active {
+      transform: translateY(0);
+    }
   </style>
 
   <!-- Firebase Compat CDN -->
@@ -1994,11 +2112,20 @@ closing of this preservation comment.
           <button id="tab-active" class="tab-btn active" onclick="switchTab('active')">
             📰 Active Feed
           </button>
+          <button id="tab-my-assignments" class="tab-btn" onclick="switchTab('my-assignments')">
+            📌 My Assignments
+          </button>
           <button id="tab-starred" class="tab-btn" onclick="switchTab('starred')">
             ⭐ Starred
           </button>
           <button id="tab-manual" class="tab-btn" onclick="switchTab('manual')">
             ➕ Manual Feed
+          </button>
+          <button id="tab-admin-assignments" class="tab-btn admin-only" onclick="switchTab('admin-assignments')" style="display: none;">
+            💼 Delegated Tasks
+          </button>
+          <button id="tab-team-directory" class="tab-btn admin-only" onclick="switchTab('team-directory')" style="display: none;">
+            👥 Team Directory
           </button>
           <button id="tab-deleted" class="tab-btn" onclick="switchTab('deleted')">
             🗑️ Trash
@@ -2100,6 +2227,34 @@ closing of this preservation comment.
           </div>
         </div>
 
+        <!-- Team Directory Section (Admin Only) -->
+        <div id="team-directory-section" class="timeline-container" style="display:none; width:100%;">
+          <div class="timeline-header" style="margin-bottom:14px;">
+            <h3 style="display:flex; align-items:center; gap:8px;">
+              <span>👥 Active Team Directory</span>
+              <span id="team-count-badge" style="background:rgba(32, 164, 159, 0.15); color:var(--accent); font-size:0.7rem; padding: 2px 6px; border-radius:10px;">0</span>
+            </h3>
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.74rem;" onclick="loadTeamDirectory()">🔄 Refresh Directory</button>
+          </div>
+          
+          <div class="glass-panel" style="padding: 16px 20px; border-color: rgba(32, 164, 159, 0.15); background: rgba(32, 164, 159, 0.015);">
+            <div style="overflow-x: auto; width:100%;">
+              <table id="team-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.76rem; color: var(--text);">
+                <thead>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--accent);">
+                    <th style="padding: 10px 8px; font-weight:600; text-align:left;">Researcher</th>
+                    <th style="padding: 10px 8px; font-weight:600; text-align:left;">Email Profile</th>
+                    <th style="padding: 10px 8px; font-weight:600; text-align:left;">Last Session Sync</th>
+                  </tr>
+                </thead>
+                <tbody id="team-table-body">
+                  <!-- Team member details will render dynamically here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- Empty State panel -->
         <div id="empty-state" class="glass-panel">
           <div class="big-icon" style="display:flex; justify-content:center; margin-bottom:14px;">
@@ -2159,6 +2314,29 @@ closing of this preservation comment.
     </div>
   </div>
 
+  <!-- ── New Assignment Pop-up Alert Modal ── -->
+  <div id="assignment-alert-backdrop" class="drawer-backdrop" style="z-index: 1100; cursor:pointer;" onclick="closeAssignmentAlert()"></div>
+  <div id="assignment-alert-modal" class="glass-panel" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); width: 480px; max-width: 90vw; z-index: 1101; padding: 28px; border-color: rgba(32, 164, 159, 0.3); background: rgba(18, 22, 28, 0.95); backdrop-filter: blur(25px); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8); border-radius: 16px; opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px;">
+    <div style="font-size: 3rem; animation: pulse 2s infinite; cursor: default;">🔔</div>
+    <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--accent); margin: 0; font-family:'Outfit', sans-serif;">New Assignment Received!</h3>
+    <p style="font-size: 0.8rem; color: var(--muted); margin: 0; line-height: 1.4;">Admin <strong id="alert-admin-name" style="color:var(--text)">Admin</strong> has delegated a new paper for you to analyze:</p>
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: var(--text); line-height: 1.4; width: 100%; word-break: break-word;" id="alert-paper-title">
+      Paper Title...
+    </div>
+    <div id="alert-message-wrap" style="width: 100%; display: none; flex-direction: column; gap: 6px; text-align: left; background: rgba(32,164,159,0.05); border: 1px solid rgba(32,164,159,0.15); padding: 12px 14px; border-radius: 8px;">
+      <span style="font-size:0.68rem; text-transform:uppercase; color:var(--accent); font-weight:700;">✍️ Admin Instruction:</span>
+      <span style="font-size:0.78rem; color:var(--text); font-style:italic;" id="alert-admin-message">"Message here"</span>
+    </div>
+    <div style="display: flex; gap: 12px; width: 100%; margin-top: 8px;">
+      <button class="btn send-comment-btn" style="flex: 1; padding: 10px;" onclick="goToAssignmentsFeed()">
+        📂 View Assignment
+      </button>
+      <button class="btn btn-secondary" style="flex: 1; padding: 10px;" onclick="closeAssignmentAlert()">
+        ✕ Close
+      </button>
+    </div>
+  </div>
+
   <!-- Toast Notices -->
   <div id="toast"></div>
 
@@ -2176,7 +2354,9 @@ closing of this preservation comment.
       'active': 1,
       'starred': 1,
       'manual': 1,
-      'deleted': 1
+      'deleted': 1,
+      'my-assignments': 1,
+      'admin-assignments': 1
     };
 
     // Check user session and initialize Firebase dynamically on startup
@@ -2195,8 +2375,9 @@ closing of this preservation comment.
       }
 
       const savedUser = localStorage.getItem("arxiv_username");
+      const savedEmail = localStorage.getItem("arxiv_email");
       if (savedUser) {
-        completeAuthSession(savedUser);
+        completeAuthSession(savedUser, savedEmail);
       }
     });
 
@@ -2209,7 +2390,7 @@ closing of this preservation comment.
             const user = result.user;
             // Get Google Profile name or fallback to Google email prefix
             const googleName = user.displayName || user.email.split('@')[0];
-            completeAuthSession(googleName);
+            completeAuthSession(googleName, user.email);
             showToast(`Authenticated as ${googleName} via Google Auth.`, "success");
           }).catch((error) => {
             showToast("Google Auth Error: " + error.message, "error");
@@ -2219,8 +2400,30 @@ closing of this preservation comment.
       }
     }
 
-    function completeAuthSession(username) {
+    let isAdmin = false;
+
+    function completeAuthSession(username, email) {
       localStorage.setItem("arxiv_username", username);
+      if (email) {
+        localStorage.setItem("arxiv_email", email);
+      }
+      
+      const userEmail = email || localStorage.getItem("arxiv_email") || "";
+      isAdmin = userEmail === "chaitanyarajeshh@gmail.com";
+      
+      // Control Admin tabs visibility
+      document.querySelectorAll('.admin-only').forEach(elem => {
+        elem.style.display = isAdmin ? 'inline-block' : 'none';
+      });
+
+      // Dynamically register user in backend database
+      if (userEmail) {
+        fetch(`${API_BASE}/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email: userEmail })
+        }).catch(err => console.warn("Dynamic user registration failed:", err));
+      }
       
       // Hide Login overlay, show Dashboard
       document.getElementById("login-overlay").style.display = "none";
@@ -2232,8 +2435,12 @@ closing of this preservation comment.
 
       // Initialize date dropdown and load feeds
       initializeFetchDatesDropdown();
+      fetchTeamUsers();
       loadPapers();
       loadNotifications();
+      
+      // Initialize Background real-time assignment alerts polling!
+      startAssignmentPoller();
     }
 
     function initializeFetchDatesDropdown() {
@@ -2267,6 +2474,9 @@ closing of this preservation comment.
 
     function signOut() {
       localStorage.removeItem("arxiv_username");
+      localStorage.removeItem("arxiv_email");
+      isAdmin = false;
+      stopAssignmentPoller();
       
       // Stop EventSource if running
       stopFetch();
@@ -2290,7 +2500,7 @@ closing of this preservation comment.
 
     // ── Load Feeds from database ──
     async function loadPapers(keepPage = false) {
-      if (currentTab === 'notifications') return; // Handled separately
+      if (currentTab === 'notifications' || currentTab === 'team-directory') return; // Handled separately
 
       try {
         const paperList = document.getElementById('paper-list');
@@ -2304,7 +2514,14 @@ closing of this preservation comment.
         document.getElementById('empty-title').textContent = "Syncing Hub...";
         document.getElementById('empty-desc').textContent = "Accessing paper records...";
 
-        const res = await fetch(`${API_BASE}/papers?status=${currentTab}`);
+        let fetchUrl = `${API_BASE}/papers?status=${currentTab}`;
+        if (currentTab === 'my-assignments') {
+          fetchUrl = `${API_BASE}/assignments?username=${encodeURIComponent(getUsername())}`;
+        } else if (currentTab === 'admin-assignments') {
+          fetchUrl = `${API_BASE}/assignments?admin=true`;
+        }
+
+        const res = await fetch(fetchUrl);
         const data = await res.json();
 
         if (data.success) {
@@ -2318,6 +2535,12 @@ closing of this preservation comment.
             if (currentTab === 'active') {
               document.getElementById('empty-title').textContent = "Feed is empty";
               document.getElementById('empty-desc').textContent = "Browse automatic preprints or check the other feeds.";
+            } else if (currentTab === 'my-assignments') {
+              document.getElementById('empty-title').textContent = "No assignments delegated yet";
+              document.getElementById('empty-desc').textContent = "Assignments sent to you by the Admin will appear directly in this personalized feed.";
+            } else if (currentTab === 'admin-assignments') {
+              document.getElementById('empty-title').textContent = "No delegated team tasks";
+              document.getElementById('empty-desc').textContent = "Papers you assign to team members will be tracked here.";
             } else if (currentTab === 'starred') {
               document.getElementById('empty-title').textContent = "No Starred papers";
               document.getElementById('empty-desc').textContent = "Star records globally in the Active or Manual Feeds to compile a team list.";
@@ -2342,14 +2565,14 @@ closing of this preservation comment.
     // ── Switch Tabs ──
     function switchTab(tab) {
       // 1. Save pagination state of previous tab before switching
-      if (['active', 'starred', 'manual', 'deleted'].includes(currentTab)) {
+      if (['active', 'starred', 'manual', 'deleted', 'my-assignments', 'admin-assignments'].includes(currentTab)) {
         tabPages[currentTab] = currentPage;
       }
 
       currentTab = tab;
 
       // 2. Restore pagination state of target tab
-      if (['active', 'starred', 'manual', 'deleted'].includes(tab)) {
+      if (['active', 'starred', 'manual', 'deleted', 'my-assignments', 'admin-assignments'].includes(tab)) {
         currentPage = tabPages[tab] || 1;
       } else {
         currentPage = 1;
@@ -2362,6 +2585,7 @@ closing of this preservation comment.
       const searchBox = document.getElementById('search-filter-controls');
       const paperList = document.getElementById('paper-list');
       const timelineSec = document.getElementById('timeline-section');
+      const teamSec = document.getElementById('team-directory-section');
       const subBar = document.getElementById('sub-bar');
 
       if (tab === 'notifications') {
@@ -2370,13 +2594,25 @@ closing of this preservation comment.
         paperList.innerHTML = '';
         subBar.style.display = 'none';
         timelineSec.style.display = 'flex';
+        if (teamSec) teamSec.style.display = 'none';
         document.getElementById('empty-state').style.display = 'none';
         document.getElementById('pagination').style.display = 'none';
         loadNotifications();
+      } else if (tab === 'team-directory') {
+        // Admin-only Team Directory Tab
+        searchBox.style.display = 'none';
+        paperList.innerHTML = '';
+        subBar.style.display = 'none';
+        timelineSec.style.display = 'none';
+        if (teamSec) teamSec.style.display = 'flex';
+        document.getElementById('empty-state').style.display = 'none';
+        document.getElementById('pagination').style.display = 'none';
+        loadTeamDirectory();
       } else {
         // Feed tabs
         subBar.style.display = 'flex';
         timelineSec.style.display = 'none';
+        if (teamSec) teamSec.style.display = 'none';
         
         if (tab === 'deleted') {
           searchBox.style.display = 'none';
@@ -2398,6 +2634,54 @@ closing of this preservation comment.
         }
       } catch (e) {
         // Polling failure silent fail
+      }
+    }
+
+    // ── Fetch Dynamic Registered Users List (Admin Only) ──
+    async function loadTeamDirectory() {
+      try {
+        const res = await fetch(`${API_BASE}/users`);
+        const data = await res.json();
+        
+        if (data.success) {
+          const users = data.users || [];
+          document.getElementById('team-count-badge').textContent = users.length;
+          
+          const tbody = document.getElementById('team-table-body');
+          if (tbody) {
+            if (users.length === 0) {
+              tbody.innerHTML = `
+                <tr>
+                  <td colspan="3" style="text-align:center; padding: 30px; color:var(--muted); font-size:0.78rem;">
+                    No team members dynamically registered yet. Users are automatically added when they log in!
+                  </td>
+                </tr>`;
+              return;
+            }
+            
+            tbody.innerHTML = users.map(u => {
+              const initials = getInitials(u.username);
+              const avatarBg = getAvatarColor(u.username);
+              const activeTime = formatIsoTime(u.last_active);
+              
+              return `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.2s;">
+                  <td style="padding: 12px 8px; display:flex; align-items:center; gap:10px;">
+                    <div class="avatar-badge" style="background:${avatarBg}; width:28px; height:28px; font-size:0.68rem;">${escapeHtml(initials)}</div>
+                    <strong style="color:var(--text);">${escapeHtml(u.username)}</strong>
+                  </td>
+                  <td style="padding: 12px 8px; color:var(--muted); font-weight:500;">
+                    ${escapeHtml(u.email)}
+                  </td>
+                  <td style="padding: 12px 8px; color:var(--accent2); font-weight:500;">
+                    🕒 ${activeTime}
+                  </td>
+                </tr>`;
+            }).join('');
+          }
+        }
+      } catch (err) {
+        showToast("Failed to fetch team directory.", "error");
       }
     }
 
@@ -2423,6 +2707,11 @@ closing of this preservation comment.
           break;
         case 'delete-comment':
           actionStr = `deleted a note from paper <span class="notification-paper-title clickable-title" onclick="switchTabAndHighlight('active', '${log.doi}')" style="cursor:pointer; text-decoration:underline;" title="Go to paper in Active Feed">"${escapeHtml(log.title)}"</span>`;
+          break;
+        case 'assign':
+          const assignedTo = log.rating ? log.rating.assigned_to : 'someone';
+          const assignMsg = log.rating ? log.rating.message : '';
+          actionStr = `assigned preprint <span class="notification-paper-title clickable-title" onclick="switchTabAndHighlight('active', '${log.doi}')" style="cursor:pointer; text-decoration:underline;" title="Go to paper in Active Feed">"${escapeHtml(log.title)}"</span> to researcher <strong>${escapeHtml(assignedTo)}</strong>${assignMsg ? ` with instruction: <span style="font-style:italic; color:var(--accent)">"${escapeHtml(assignMsg)}"</span>` : ''}`;
           break;
       }
 
@@ -2621,7 +2910,7 @@ closing of this preservation comment.
           💬 Team Notes ${commentCount > 0 ? `<span>(${commentCount})</span>` : ''}
         </button>`;
 
-      if (currentTab === 'active' || currentTab === 'starred' || currentTab === 'manual') {
+      if (currentTab === 'active' || currentTab === 'starred' || currentTab === 'manual' || currentTab === 'my-assignments' || currentTab === 'admin-assignments') {
         cardActionsHTML = `
           ${commentBtnHTML}
           <button class="card-action-icon-btn" onclick="softDeletePaper('${doi}')" title="Soft-delete globally">
@@ -2638,8 +2927,50 @@ closing of this preservation comment.
           </button>`;
       }
 
+      // Compilation of assignment info banner
+      let assignmentBannerHTML = '';
+      if (p.assignment) {
+        const assignTime = formatIsoTime(p.assignment.timestamp);
+        if (currentTab === 'admin-assignments') {
+          assignmentBannerHTML = `
+            <div class="assignment-banner">
+              <div class="assignment-banner-header">
+                <span>📌 Assigned to: <strong>${escapeHtml(p.assignment.assigned_to)}</strong></span>
+                <span style="font-size:0.65rem; color:var(--muted)">📅 ${assignTime}</span>
+              </div>
+              ${p.assignment.message ? `<div class="assignment-banner-msg">💬 "${escapeHtml(p.assignment.message)}"</div>` : ''}
+            </div>`;
+        } else {
+          assignmentBannerHTML = `
+            <div class="assignment-banner">
+              <div class="assignment-banner-header">
+                <span>📌 Assigned by: <strong>${escapeHtml(p.assignment.assigned_by)}</strong></span>
+                <span style="font-size:0.65rem; color:var(--muted)">📅 ${assignTime}</span>
+              </div>
+              ${p.assignment.message ? `<div class="assignment-banner-msg">💬 "${escapeHtml(p.assignment.message)}"</div>` : ''}
+            </div>`;
+        }
+      }
+
+      // Compilation of Admin delegate dropdown panel
+      let adminAssignPanelHTML = '';
+      if (isAdmin && currentTab !== 'deleted') {
+        adminAssignPanelHTML = `
+          <div class="admin-assign-panel">
+            <span class="admin-assign-panel-title">💼 Delegate Task to Researcher:</span>
+            <div class="admin-assign-inputs">
+              <select class="admin-assign-select" id="assign-select-${id}">
+                ${teamUsers.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}
+              </select>
+              <input type="text" class="admin-assign-msg-input" id="assign-msg-${id}" placeholder="Write instructions (e.g. urgent, read today)..." />
+              <button class="admin-assign-btn" onclick="submitAssignment('${doi}', '${id}')">Assign</button>
+            </div>
+          </div>`;
+      }
+
       return `
         <div class="paper-card glass-panel" id="card-${id}">
+          ${assignmentBannerHTML}
           <div class="card-top-row">
             <div class="paper-title">
               <a href="${p.link}" target="_blank" rel="noopener">${escapeHtml(p.title)}</a>
@@ -2681,6 +3012,9 @@ closing of this preservation comment.
             <div class="card-actions">
               ${cardActionsHTML}
             </div>
+
+            <!-- Dynamic Admin assignment panel -->
+            ${adminAssignPanelHTML}
           </div>
         </div>`;
     }
@@ -3369,6 +3703,183 @@ closing of this preservation comment.
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+    }
+
+    // ── Predefined falling back researchers list ──
+    let teamUsers = ["Amit", "Vansh Gupta", "Vignesh Skanda", "Chaitanya Rajesh"];
+
+    async function fetchTeamUsers() {
+      try {
+        const res = await fetch(`${API_BASE}/users`);
+        const data = await res.json();
+        if (data.success && data.users) {
+          const names = data.users.map(u => u.username);
+          // Merge and keep unique names
+          const merged = new Set([...teamUsers, ...names]);
+          teamUsers = Array.from(merged);
+          
+          // Update select dropdowns in active page if admin is online
+          if (isAdmin) {
+            const selects = document.querySelectorAll('.admin-assign-select');
+            selects.forEach(select => {
+              const currentVal = select.value;
+              select.innerHTML = teamUsers.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+              if (teamUsers.includes(currentVal)) {
+                select.value = currentVal;
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to fetch dynamic users list:", e);
+      }
+    }
+
+    // ── Task Delegation submission ──
+    async function submitAssignment(doi, id) {
+      const select = document.getElementById(`assign-select-${id}`);
+      const msgInput = document.getElementById(`assign-msg-${id}`);
+      if (!select) return;
+
+      const assigned_to = select.value;
+      const message = msgInput ? msgInput.value.trim() : "";
+      const assigned_by = getUsername();
+
+      if (!assigned_to) {
+        showToast("Please select a researcher to assign.", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/assignments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            doi,
+            assigned_to,
+            assigned_by,
+            message
+          })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showToast(`Paper successfully assigned to ${assigned_to}.`, "success");
+          if (msgInput) msgInput.value = "";
+          loadPapers(true);
+          loadNotifications();
+        } else {
+          showToast(data.message || "Failed to delegate paper.", "error");
+        }
+      } catch (err) {
+        showToast("Database connection lost.", "error");
+      }
+    }
+
+    // ── Background assignment polling ──
+    let assignmentPollerInterval = null;
+
+    function startAssignmentPoller() {
+      stopAssignmentPoller(); // Clear any existing
+
+      const username = getUsername();
+      if (!username || username === "Guest") return;
+
+      console.log(`Starting real-time assignment poller for ${username}...`);
+      
+      // Run once immediately
+      pollAssignments();
+
+      // Poll every 5 seconds
+      assignmentPollerInterval = setInterval(pollAssignments, 5000);
+    }
+
+    function stopAssignmentPoller() {
+      if (assignmentPollerInterval) {
+        clearInterval(assignmentPollerInterval);
+        assignmentPollerInterval = null;
+        console.log("Assignment poller stopped.");
+      }
+    }
+
+    async function pollAssignments() {
+      const username = getUsername();
+      if (!username || username === "Guest") return;
+
+      try {
+        const res = await fetch(`${API_BASE}/assignments?username=${encodeURIComponent(username)}`);
+        const data = await res.json();
+
+        if (data.success && data.papers) {
+          // Check if there is any assignment we haven't acknowledged yet
+          let acknowledged = [];
+          try {
+            const saved = localStorage.getItem("acknowledged_assignments");
+            if (saved) acknowledged = JSON.parse(saved);
+          } catch (e) {
+            acknowledged = [];
+          }
+
+          // Find the first assignment that is not in the acknowledged list
+          const newAssignmentPaper = data.papers.find(p => p.assignment && !acknowledged.includes(p.assignment.id));
+
+          if (newAssignmentPaper) {
+            const assignment = newAssignmentPaper.assignment;
+            
+            // Trigger alert modal!
+            showAssignmentAlert(assignment.assigned_by, newAssignmentPaper.title, assignment.message);
+            
+            // Mark as acknowledged
+            acknowledged.push(assignment.id);
+            localStorage.setItem("acknowledged_assignments", JSON.stringify(acknowledged));
+          }
+        }
+      } catch (e) {
+        // Silent fail for polling errors
+      }
+    }
+
+    // ── Alert Modal Animations ──
+    function showAssignmentAlert(adminName, paperTitle, message) {
+      const modal = document.getElementById("assignment-alert-modal");
+      const backdrop = document.getElementById("assignment-alert-backdrop");
+      const adminNameElem = document.getElementById("alert-admin-name");
+      const paperTitleElem = document.getElementById("alert-paper-title");
+      const adminMsgElem = document.getElementById("alert-admin-message");
+      const msgWrap = document.getElementById("alert-message-wrap");
+
+      if (adminNameElem) adminNameElem.textContent = adminName;
+      if (paperTitleElem) paperTitleElem.textContent = paperTitle;
+      
+      if (msgWrap && adminMsgElem) {
+        if (message) {
+          adminMsgElem.textContent = `"${message}"`;
+          msgWrap.style.display = "flex";
+        } else {
+          msgWrap.style.display = "none";
+        }
+      }
+
+      // Animate modal entry
+      backdrop.classList.add("open");
+      modal.style.opacity = "1";
+      modal.style.pointerEvents = "all";
+      modal.style.transform = "translate(-50%, -50%) scale(1)";
+    }
+
+    function closeAssignmentAlert() {
+      const modal = document.getElementById("assignment-alert-modal");
+      const backdrop = document.getElementById("assignment-alert-backdrop");
+
+      backdrop.classList.remove("open");
+      modal.style.opacity = "0";
+      modal.style.pointerEvents = "none";
+      modal.style.transform = "translate(-50%, -50%) scale(0.9)";
+    }
+
+    function goToAssignmentsFeed() {
+      closeAssignmentAlert();
+      switchTab('my-assignments');
     }
   </script>
 </body>

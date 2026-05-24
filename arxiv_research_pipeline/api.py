@@ -156,7 +156,12 @@ from database.mongodb import (
     get_papers_by_status,
     add_comment_to_paper,
     get_paper_comments,
-    delete_comment_from_paper
+    delete_comment_from_paper,
+    save_user_db,
+    get_users_db,
+    assign_paper_to_user_db,
+    get_user_assignments_db,
+    get_admin_assignments_db
 )
 from services.arxiv_fetcher import stream_yesterdays_papers_batched, fetch_single_arxiv_paper
 
@@ -581,6 +586,122 @@ def delete_comment():
             return jsonify(result), 200
         else:
             return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+# ============================================================
+# POST /users
+# Body: { "username": "...", "email": "..." }
+# Dynamically upserts/registers team login details
+# ============================================================
+@app.route("/users", methods=["POST"])
+def post_user():
+    try:
+        data     = request.get_json() or {}
+        username = data.get("username")
+        email    = data.get("email")
+
+        if not username or not email:
+            return jsonify({"success": False, "message": "Missing username or email."}), 400
+
+        result = save_user_db(username, email)
+        return jsonify(result), 200 if result["success"] else 400
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+# ============================================================
+# GET /users
+# Returns all registered team members
+# ============================================================
+@app.route("/users", methods=["GET"])
+def get_users():
+    try:
+        users = get_users_db()
+        return jsonify({
+            "success": True,
+            "count":   len(users),
+            "users":   users
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+# ============================================================
+# POST /assignments
+# Body: { "doi": "...", "assigned_to": "...", "assigned_by": "...", "message": "..." }
+# Delegates task and logs global timeline activity
+# ============================================================
+@app.route("/assignments", methods=["POST"])
+def post_assignment():
+    try:
+        data        = request.get_json() or {}
+        doi         = data.get("doi")
+        assigned_to = data.get("assigned_to")
+        assigned_by = data.get("assigned_by")
+        message     = data.get("message", "").strip()
+
+        if not doi or not assigned_to or not assigned_by:
+            return jsonify({"success": False, "message": "Missing doi, assigned_to, or assigned_by fields."}), 400
+
+        paper_title = _get_paper_title_by_doi(doi)
+        result = assign_paper_to_user_db(doi, paper_title, assigned_to, assigned_by, message)
+
+        if result["success"]:
+            # Log global activity timeline notification with a custom dictionary in rating!
+            rating_payload = {
+                "assigned_to": assigned_to,
+                "message":     message
+            }
+            add_notification_db("assign", assigned_by, doi, paper_title, rating=rating_payload)
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+# ============================================================
+# GET /assignments
+# Query params: username=... OR admin=true
+# Returns active assignments queue with complete papers metadata
+# ============================================================
+@app.route("/assignments", methods=["GET"])
+def get_assignments():
+    try:
+        username = request.args.get("username")
+        is_admin = request.args.get("admin") == "true"
+
+        if is_admin:
+            # Master assignment tracking list for Admin
+            papers = get_admin_assignments_db()
+        elif username:
+            # Personalized queue for a specific researcher
+            papers = get_user_assignments_db(username)
+        else:
+            return jsonify({"success": False, "message": "Missing username or admin query parameters."}), 400
+
+        return jsonify({
+            "success": True,
+            "count":   len(papers),
+            "papers":  papers
+        }), 200
 
     except Exception as e:
         return jsonify({

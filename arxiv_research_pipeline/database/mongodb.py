@@ -174,6 +174,8 @@ client     = None
 collection = None
 notifications_col = None
 crawls_col = None
+users_col = None
+assignments_col = None
 
 try:
     client = MongoClient(
@@ -192,6 +194,8 @@ try:
     collection        = db["papers"]
     notifications_col = db["notifications"]
     crawls_col        = db["crawls"]
+    users_col         = db["users"]
+    assignments_col   = db["assignments"]
 
 except PyMongoError as e:
     print("MongoDB Atlas Connection Failed!")
@@ -199,6 +203,8 @@ except PyMongoError as e:
     collection = None
     notifications_col = None
     crawls_col = None
+    users_col = None
+    assignments_col = None
 
 
 def save_paper_metadata(paper):
@@ -591,3 +597,134 @@ def delete_comment_from_paper(doi, comment_id, username):
     except PyMongoError as e:
         print(f"MongoDB Error in delete_comment_from_paper: {e}")
         return {"success": False, "message": f"Database error: {str(e)}"}
+
+
+# ============================================================
+# Dynamic User Auto-Registration & Directory Logic
+# ============================================================
+def save_user_db(username, email):
+    """
+    Dynamically registers/updates user login details in MongoDB.
+    """
+    if users_col is None:
+        return {"success": False, "message": "Database unavailable."}
+    try:
+        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        users_col.update_one(
+            {"email": email},
+            {
+                "$set": {
+                    "username":    username,
+                    "last_active": timestamp
+                }
+            },
+            upsert=True
+        )
+        return {"success": True, "message": "User registered successfully."}
+    except PyMongoError as e:
+        print(f"MongoDB Error in save_user_db: {e}")
+        return {"success": False, "message": str(e)}
+
+
+def get_users_db():
+    """
+    Retrieves all dynamically registered team members for the directory and admin selection.
+    """
+    if users_col is None:
+        return []
+    try:
+        # Fetch, sort by last active descending
+        users = list(users_col.find({}, {"_id": 0}).sort("last_active", -1))
+        return users
+    except PyMongoError as e:
+        print(f"MongoDB Error in get_users_db: {e}")
+        return []
+
+
+# ============================================================
+# Admin Delegated Tasks & Assignments Logic
+# ============================================================
+def assign_paper_to_user_db(doi, paper_title, assigned_to, assigned_by, message):
+    """
+    Delegates a research task (paper) to a specific user with a custom message.
+    Upserts matching DOI and assigned user to prevent duplicates.
+    """
+    if assignments_col is None:
+        return {"success": False, "message": "Database unavailable."}
+    try:
+        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        assignments_col.update_one(
+            {"doi": doi, "assigned_to": assigned_to},
+            {
+                "$set": {
+                    "paper_title": paper_title,
+                    "assigned_by": assigned_by,
+                    "message":     message,
+                    "timestamp":   timestamp,
+                    "status":      "pending"
+                }
+            },
+            upsert=True
+        )
+        return {"success": True, "message": f"Paper successfully assigned to {assigned_to}."}
+    except PyMongoError as e:
+        print(f"MongoDB Error in assign_paper_to_user_db: {e}")
+        return {"success": False, "message": str(e)}
+
+
+def get_user_assignments_db(username):
+    """
+    Fetches all delegated assignments for a specific user and cross-references them
+    against full paper metadata, injecting assignment instructions for frontend rendering.
+    """
+    if assignments_col is None or collection is None:
+        return []
+    try:
+        # Find user tasks, sort descending by assignment date
+        tasks = list(assignments_col.find({"assigned_to": username}).sort("timestamp", -1))
+        results = []
+        for task in tasks:
+            paper = collection.find_one({"doi": task["doi"]})
+            if paper:
+                paper["_id"] = str(paper["_id"])
+                # Inject assignment details cleanly into the paper card payload!
+                paper["assignment"] = {
+                    "id":          str(task["_id"]),
+                    "assigned_by": task["assigned_by"],
+                    "message":     task["message"],
+                    "timestamp":   task["timestamp"]
+                }
+                results.append(paper)
+        return results
+    except PyMongoError as e:
+        print(f"MongoDB Error in get_user_assignments_db: {e}")
+        return []
+
+
+def get_admin_assignments_db():
+    """
+    Retrieves all team assignments globally for admin tracking, cross-referencing papers.
+    """
+    if assignments_col is None or collection is None:
+        return []
+    try:
+        # Fetch all global tasks, sort descending by delegation timestamp
+        tasks = list(assignments_col.find({}).sort("timestamp", -1))
+        results = []
+        for task in tasks:
+            paper = collection.find_one({"doi": task["doi"]})
+            if paper:
+                paper["_id"] = str(paper["_id"])
+                # Inject tracking details
+                paper["assignment"] = {
+                    "id":          str(task["_id"]),
+                    "assigned_to": task["assigned_to"],
+                    "assigned_by": task["assigned_by"],
+                    "message":     task["message"],
+                    "timestamp":   task["timestamp"]
+                }
+                results.append(paper)
+        return results
+    except PyMongoError as e:
+        print(f"MongoDB Error in get_admin_assignments_db: {e}")
+        return []
