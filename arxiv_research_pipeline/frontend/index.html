@@ -2073,9 +2073,12 @@ closing of this preservation comment.
       <h2>Moleculyst Hub</h2>
       <p>Research Team Collaborative Dashboard. Authenticate to enter the preprints platform.</p>
       
-      <div class="login-form-group">
-        <button class="btn" onclick="signInWithGoogle()" style="width:100%; justify-content:center;">
-          🔑 Sign In with Google
+      <div class="login-form-group" style="display:flex; flex-direction:column; gap:12px; width: 100%;">
+        <button class="btn" onclick="signInWithGoogle('user')" style="width:100%; justify-content:center;">
+          🔑 Sign In with Google (Researcher)
+        </button>
+        <button class="btn" onclick="signInWithGoogle('admin')" style="width:100%; justify-content:center; background: linear-gradient(135deg, var(--accent) 0%, #157f7b 100%); color: #0c0e18;" >
+          👑 Sign In with Google (Admin)
         </button>
       </div>
     </div>
@@ -2376,13 +2379,14 @@ closing of this preservation comment.
 
       const savedUser = localStorage.getItem("arxiv_username");
       const savedEmail = localStorage.getItem("arxiv_email");
+      const savedRole = localStorage.getItem("arxiv_role");
       if (savedUser) {
-        completeAuthSession(savedUser, savedEmail);
+        completeAuthSession(savedUser, savedEmail, savedRole || 'user');
       }
     });
 
     // Direct Firebase Google Authentication Gate
-    function signInWithGoogle() {
+    function signInWithGoogle(role = 'user') {
       if (typeof firebase !== 'undefined' && firebase.auth) {
         const provider = new firebase.auth.GoogleAuthProvider();
         firebase.auth().signInWithPopup(provider)
@@ -2390,7 +2394,7 @@ closing of this preservation comment.
             const user = result.user;
             // Get Google Profile name or fallback to Google email prefix
             const googleName = user.displayName || user.email.split('@')[0];
-            completeAuthSession(googleName, user.email);
+            completeAuthSession(googleName, user.email, role);
             showToast(`Authenticated as ${googleName} via Google Auth.`, "success");
           }).catch((error) => {
             showToast("Google Auth Error: " + error.message, "error");
@@ -2402,20 +2406,21 @@ closing of this preservation comment.
 
     let isAdmin = false;
 
-    function completeAuthSession(username, email) {
+    function completeAuthSession(username, email, role = 'user') {
       localStorage.setItem("arxiv_username", username);
       if (email) {
         localStorage.setItem("arxiv_email", email);
       }
+      localStorage.setItem("arxiv_role", role);
       
-      const userEmail = email || localStorage.getItem("arxiv_email") || "";
-      isAdmin = userEmail === "chaitanyarajeshh@gmail.com";
+      isAdmin = role === 'admin';
       
       // Control Admin tabs visibility
       document.querySelectorAll('.admin-only').forEach(elem => {
         elem.style.display = isAdmin ? 'inline-block' : 'none';
       });
 
+      const userEmail = email || localStorage.getItem("arxiv_email") || "";
       // Dynamically register user in backend database
       if (userEmail) {
         fetch(`${API_BASE}/users`, {
@@ -2475,6 +2480,7 @@ closing of this preservation comment.
     function signOut() {
       localStorage.removeItem("arxiv_username");
       localStorage.removeItem("arxiv_email");
+      localStorage.removeItem("arxiv_role");
       isAdmin = false;
       stopAssignmentPoller();
       
