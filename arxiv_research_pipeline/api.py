@@ -155,7 +155,8 @@ from database.mongodb import (
     clear_all_data_db,
     get_papers_by_status,
     add_comment_to_paper,
-    get_paper_comments
+    get_paper_comments,
+    delete_comment_from_paper
 )
 from services.arxiv_fetcher import stream_yesterdays_papers_batched, fetch_single_arxiv_paper
 
@@ -542,6 +543,40 @@ def post_comment(doi):
             title = _get_paper_title_by_doi(doi)
             # Log a team activity notification (comment)
             add_notification_db("comment", username, doi, title, rating=None)
+            
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+# ============================================================
+# DELETE /comments
+# Query params: doi=..., comment_id=..., username=...
+# Deletes a comment subdocument with ownership check
+# ============================================================
+@app.route("/comments", methods=["DELETE"])
+def delete_comment():
+    try:
+        doi        = request.args.get("doi")
+        comment_id = request.args.get("comment_id")
+        username   = request.args.get("username")
+
+        if not doi or not comment_id or not username:
+            return jsonify({"success": False, "message": "Missing doi, comment_id, or username query parameters."}), 400
+
+        # Perform deletion
+        result = delete_comment_from_paper(doi, comment_id, username)
+        if result["success"]:
+            # Retrieve paper title to create an informative timeline entry
+            title = _get_paper_title_by_doi(doi)
+            # Log activity: deletion
+            add_notification_db("delete-comment", username, doi, title, rating=None)
             
             return jsonify(result), 200
         else:

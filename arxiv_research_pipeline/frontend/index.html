@@ -1834,6 +1834,25 @@ closing of this preservation comment.
       border-radius: 12px 0 12px 12px;
     }
 
+    .delete-comment-btn {
+      background: none;
+      border: none;
+      color: rgba(239, 68, 68, 0.5);
+      cursor: pointer;
+      font-size: 0.76rem;
+      padding: 0 4px;
+      margin-left: 8px;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .delete-comment-btn:hover {
+      color: #ef4444;
+      transform: scale(1.2);
+    }
+
     .drawer-footer {
       padding: 20px 24px;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -2153,6 +2172,12 @@ closing of this preservation comment.
     let currentTab = 'active'; // 'active', 'starred', 'manual', 'deleted', 'notifications'
     let allPapers = [];
     let filtered = [];
+    let tabPages = {
+      'active': 1,
+      'starred': 1,
+      'manual': 1,
+      'deleted': 1
+    };
 
     // Check user session and initialize Firebase dynamically on startup
     document.addEventListener("DOMContentLoaded", async () => {
@@ -2264,7 +2289,7 @@ closing of this preservation comment.
     }
 
     // ── Load Feeds from database ──
-    async function loadPapers() {
+    async function loadPapers(keepPage = false) {
       if (currentTab === 'notifications') return; // Handled separately
 
       try {
@@ -2286,7 +2311,7 @@ closing of this preservation comment.
           allPapers = data.papers;
           document.getElementById('active-count').textContent = allPapers.length;
           
-          handleSearch();
+          handleSearch(keepPage);
           
           if (allPapers.length === 0) {
             emptyState.style.display = 'block';
@@ -2316,8 +2341,19 @@ closing of this preservation comment.
 
     // ── Switch Tabs ──
     function switchTab(tab) {
+      // 1. Save pagination state of previous tab before switching
+      if (['active', 'starred', 'manual', 'deleted'].includes(currentTab)) {
+        tabPages[currentTab] = currentPage;
+      }
+
       currentTab = tab;
-      currentPage = 1; // Reset to page 1 automatically on tab switch
+
+      // 2. Restore pagination state of target tab
+      if (['active', 'starred', 'manual', 'deleted'].includes(tab)) {
+        currentPage = tabPages[tab] || 1;
+      } else {
+        currentPage = 1;
+      }
       
       // Update Tab CSS selection styling
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -2348,7 +2384,7 @@ closing of this preservation comment.
           searchBox.style.display = 'flex';
         }
         
-        loadPapers();
+        loadPapers(true); // Pass true to preserve restored page!
       }
     }
 
@@ -2381,6 +2417,12 @@ closing of this preservation comment.
           break;
         case 'rate':
           actionStr = `reviewed paper <span class="notification-paper-title clickable-title" onclick="switchTabAndHighlight('active', '${log.doi}')" style="cursor:pointer; text-decoration:underline;" title="Go to paper in Active Feed">"${escapeHtml(log.title)}"</span> giving a score of <span class="star-count">${log.rating}★</span>`;
+          break;
+        case 'comment':
+          actionStr = `shared a team note on paper <span class="notification-paper-title clickable-title" onclick="switchTabAndHighlight('active', '${log.doi}')" style="cursor:pointer; text-decoration:underline;" title="Go to paper in Active Feed">"${escapeHtml(log.title)}"</span>`;
+          break;
+        case 'delete-comment':
+          actionStr = `deleted a note from paper <span class="notification-paper-title clickable-title" onclick="switchTabAndHighlight('active', '${log.doi}')" style="cursor:pointer; text-decoration:underline;" title="Go to paper in Active Feed">"${escapeHtml(log.title)}"</span>`;
           break;
       }
 
@@ -2415,7 +2457,15 @@ closing of this preservation comment.
       
       // 2. Wait slightly for loadPapers async fetch and render
       try {
-        await loadPapers();
+        await loadPapers(true);
+        
+        // Find index of the paper and jump to its page automatically!
+        const index = filtered.findIndex(p => p.doi === doi);
+        if (index !== -1) {
+          const pageNum = Math.floor(index / PAGE_SIZE) + 1;
+          currentPage = pageNum;
+          renderPage();
+        }
         
         // 3. Scroll to card and highlight
         const id = doiToId(doi);
@@ -2450,7 +2500,7 @@ closing of this preservation comment.
     }
 
     // ── Search & Filters ──
-    function handleSearch() {
+    function handleSearch(keepPage = false) {
       const query = document.getElementById('search-input').value.toLowerCase();
       const ratedFilter = document.getElementById('filter-rated').value;
 
@@ -2474,7 +2524,9 @@ closing of this preservation comment.
         return matchText && matchRated;
       });
 
-      currentPage = 1;
+      if (!keepPage) {
+        currentPage = 1;
+      }
       renderPage();
     }
 
@@ -3196,13 +3248,22 @@ closing of this preservation comment.
         const isOwn = c.username === activeUser;
         const itemClass = isOwn ? 'comment-item own-comment' : 'comment-item';
         
+        // Show delete button only if it's the active user's own comment and it has a valid comment ID
+        const deleteButton = isOwn && c.id ? `
+          <button class="delete-comment-btn" onclick="deleteComment('${c.id}')" title="Delete note permanently">
+            🗑️
+          </button>` : '';
+        
         return `
           <div class="${itemClass}">
             <div class="avatar-badge" style="background:${avatarBg};" title="${escapeHtml(c.username)}">${escapeHtml(initials)}</div>
             <div class="comment-content-wrap">
               <div class="comment-meta">
                 <span class="comment-author">${escapeHtml(c.username)}</span>
-                <span class="comment-time">${formatRelativeTime(c.timestamp)}</span>
+                <span class="comment-time">
+                  ${formatRelativeTime(c.timestamp)}
+                  ${deleteButton}
+                </span>
               </div>
               <div class="comment-bubble">
                 ${escapeHtml(c.text)}
@@ -3214,6 +3275,30 @@ closing of this preservation comment.
       // Auto scroll comments drawer list to the bottom so newest notes are seen instantly
       if (!silent || list.scrollHeight - list.scrollTop - list.clientHeight < 120) {
         list.scrollTop = list.scrollHeight;
+      }
+    }
+
+    async function deleteComment(commentId) {
+      if (!activeCommentDoi) return;
+      if (!confirm("Are you sure you want to delete this note?")) return;
+
+      const username = getUsername();
+
+      try {
+        const res = await fetch(`${API_BASE}/comments?doi=${encodeURIComponent(activeCommentDoi)}&comment_id=${commentId}&username=${encodeURIComponent(username)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showToast("Note deleted.", "success");
+          await fetchAndRenderComments(activeCommentDoi);
+          loadNotifications(); // Reload activity log feed
+        } else {
+          showToast(data.message || "Failed to delete note.", "error");
+        }
+      } catch (err) {
+        showToast("Database connection lost.", "error");
       }
     }
 

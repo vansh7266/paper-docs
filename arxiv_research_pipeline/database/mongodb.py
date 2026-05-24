@@ -1,6 +1,7 @@
 import certifi
 import json
 import os
+import uuid
 
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
@@ -526,9 +527,10 @@ def add_comment_to_paper(doi, username, text):
 
     try:
         comment = {
+            "id":        str(uuid.uuid4()),
             "username":  username,
             "text":      text,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
         }
 
         # Atomically push the comment into the array
@@ -562,3 +564,30 @@ def get_paper_comments(doi):
     except PyMongoError as e:
         print(f"MongoDB Error in get_paper_comments: {e}")
         return []
+
+
+def delete_comment_from_paper(doi, comment_id, username):
+    """
+    Atomically removes a specific comment from a paper's comments list.
+    Enforces ownership: only deletes if both comment_id and username match.
+    """
+    if collection is None:
+        return {"success": False, "message": "Database unavailable."}
+
+    try:
+        result = collection.update_one(
+            {"doi": doi},
+            {"$pull": {"comments": {"id": comment_id, "username": username}}}
+        )
+
+        if result.matched_count == 0:
+            return {"success": False, "message": f"No paper found in DB with DOI: {doi}"}
+
+        if result.modified_count == 0:
+            return {"success": False, "message": "Comment not found or authorization failed."}
+
+        return {"success": True, "message": "Comment deleted successfully."}
+
+    except PyMongoError as e:
+        print(f"MongoDB Error in delete_comment_from_paper: {e}")
+        return {"success": False, "message": f"Database error: {str(e)}"}
