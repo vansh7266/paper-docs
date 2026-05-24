@@ -2489,7 +2489,12 @@ closing of this preservation comment.
 
     function formatIsoTime(isoStr) {
       try {
-        const d = new Date(isoStr);
+        let parsedStr = isoStr;
+        // Parse UTC timestamp correctly by ensuring trailing Z is present for legacy dates
+        if (typeof parsedStr === 'string' && !parsedStr.endsWith('Z') && !parsedStr.includes('+')) {
+          parsedStr += 'Z';
+        }
+        const d = new Date(parsedStr);
         return d.toLocaleString('en-US', { 
           year: 'numeric', month: 'short', day: 'numeric',
           hour: '2-digit', minute: '2-digit', second: '2-digit' 
@@ -3139,7 +3144,12 @@ closing of this preservation comment.
     function formatRelativeTime(isoString) {
       if (!isoString) return "";
       try {
-        const date = new Date(isoString);
+        let parsedStr = isoString;
+        // Parse UTC timestamp correctly by ensuring trailing Z is present for legacy dates
+        if (typeof parsedStr === 'string' && !parsedStr.endsWith('Z') && !parsedStr.includes('+')) {
+          parsedStr += 'Z';
+        }
+        const date = new Date(parsedStr);
         const now = new Date();
         const diffMs = now - date;
         const diffMins = Math.floor(diffMs / 60000);
