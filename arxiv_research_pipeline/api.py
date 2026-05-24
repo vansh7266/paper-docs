@@ -211,14 +211,22 @@ def fetch_papers_stream():
     date_str = request.args.get("date")  # Parse optional custom target date YYYY-MM-DD
     def generate():
         import time
+        from database.mongodb import log_successful_crawl
         total_new        = 0
         total_duplicates = 0
+        active_crawl_date = None
 
         try:
             for batch in stream_yesterdays_papers_batched(date_str):
                 if batch == "ALREADY_CRAWLED":
                     yield f"data: {json.dumps({'error': 'No papers left to fetch', 'already_crawled': True})}\n\n"
                     return
+
+                # Record the target date of the papers we are currently streaming
+                if batch and len(batch) > 0:
+                    pub_str = batch[0].get("published", "")
+                    if pub_str and len(pub_str) >= 10:
+                        active_crawl_date = pub_str[:10]
 
                 # Process and stream papers in optimized sub-batches of 100 to create a beautiful live progressive streaming effect
                 sub_batch_size = 100
@@ -267,8 +275,17 @@ def fetch_papers_stream():
                     }
                     yield f"data: {json.dumps(event_data)}\n\n"
 
+            # Wrote and streamed everything completely! Log the crawl date as successful globally now
+            if active_crawl_date:
+                log_successful_crawl(active_crawl_date)
+
+        except GeneratorExit:
+            print("Streaming connection aborted by user/client. Crawl date remains unlocked.")
+            return
+
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            return
 
         yield f"data: {json.dumps({'done': True, 'new': total_new, 'duplicates': total_duplicates})}\n\n"
 

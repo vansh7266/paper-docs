@@ -354,7 +354,7 @@ def stream_yesterdays_papers_batched(date_str=None):
     If date_str (YYYY-MM-DD) is provided, crawls that specific date only.
     Handles the 'ALREADY_CRAWLED' lock globally.
     """
-    from database.mongodb import check_crawl_exists, log_successful_crawl
+    from database.mongodb import check_crawl_exists
 
     if date_str:
         if check_crawl_exists(date_str):
@@ -364,7 +364,6 @@ def stream_yesterdays_papers_batched(date_str=None):
             target = datetime.strptime(date_str, "%Y-%m-%d")
             papers = _fetch_for_date(target)
             if papers:
-                log_successful_crawl(date_str)
                 yield papers
             else:
                 yield []
@@ -383,7 +382,6 @@ def stream_yesterdays_papers_batched(date_str=None):
             all_already_crawled = False
             papers = _fetch_for_date(target)
             if papers:
-                log_successful_crawl(target_str)
                 yield papers
                 return
             
