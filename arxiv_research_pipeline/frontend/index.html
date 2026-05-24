@@ -1647,6 +1647,259 @@ closing of this preservation comment.
     .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     .page-info { font-size: 0.78rem; color: var(--muted); }
 
+    /* ── Comments Drawer ── */
+    .drawer-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .drawer-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .comments-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 440px;
+      max-width: 90vw;
+      height: 100vh;
+      background: rgba(18, 22, 28, 0.85);
+      backdrop-filter: blur(25px);
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      z-index: 1000;
+      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .comments-drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .drawer-title-wrap h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .drawer-paper-title {
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-weight: 500;
+    }
+
+    .drawer-close-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .drawer-close-btn:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+
+    .comments-list {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    /* Scrollbar for comments */
+    .comments-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .comments-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .comments-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+
+    .comment-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      animation: fadeUp 0.3s ease;
+    }
+
+    .avatar-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .comment-content-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .comment-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.7rem;
+    }
+
+    .comment-author {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .comment-time {
+      color: var(--muted);
+    }
+
+    .comment-bubble {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 10px 14px;
+      border-radius: 0 12px 12px 12px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    /* Styles for current active user's comments */
+    .comment-item.own-comment {
+      flex-direction: row-reverse;
+    }
+
+    .comment-item.own-comment .comment-meta {
+      flex-direction: row-reverse;
+    }
+
+    .comment-item.own-comment .comment-bubble {
+      background: rgba(32, 164, 159, 0.03);
+      border-color: rgba(32, 164, 159, 0.2);
+      border-radius: 12px 0 12px 12px;
+    }
+
+    .drawer-footer {
+      padding: 20px 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(18, 22, 28, 0.95);
+    }
+
+    .comments-input-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .comments-input-wrap textarea {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      color: var(--text);
+      resize: none;
+      transition: all 0.2s;
+    }
+
+    .comments-input-wrap textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: rgba(32, 164, 159, 0.01);
+    }
+
+    .send-comment-btn {
+      width: 100%;
+      justify-content: center;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+    }
+
+    /* Comment Action chip on preprint cards */
+    .comment-action-chip {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      border-radius: 12px;
+      padding: 4px 10px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .comment-action-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(32, 164, 159, 0.05);
+    }
+
+    .comment-action-chip.has-comments {
+      color: var(--accent);
+      border-color: rgba(32, 164, 159, 0.3);
+      background: rgba(32, 164, 159, 0.03);
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; }
       to   { opacity: 1; }
@@ -1862,6 +2115,31 @@ closing of this preservation comment.
 
   </div>
 
+  <!-- ── Global Comments Slide-Out Drawer ── -->
+  <div id="drawer-backdrop" class="drawer-backdrop" onclick="closeCommentsDrawer()"></div>
+  <div id="comments-drawer" class="comments-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title-wrap">
+        <h3>💬 Team Notes</h3>
+        <p id="drawer-paper-title" class="drawer-paper-title">Loading paper title...</p>
+      </div>
+      <button class="drawer-close-btn" onclick="closeCommentsDrawer()">✕</button>
+    </div>
+    
+    <div id="comments-list" class="comments-list">
+      <!-- Comment bubbles will render dynamically here -->
+    </div>
+    
+    <div class="drawer-footer">
+      <div class="comments-input-wrap">
+        <textarea id="comment-textarea" placeholder="Write a team note regarding this preprint..." rows="2" onkeydown="handleCommentKey(event)"></textarea>
+        <button class="btn send-comment-btn" onclick="submitComment()">
+          🚀 Send Note
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notices -->
   <div id="toast"></div>
 
@@ -2039,6 +2317,7 @@ closing of this preservation comment.
     // ── Switch Tabs ──
     function switchTab(tab) {
       currentTab = tab;
+      currentPage = 1; // Reset to page 1 automatically on tab switch
       
       // Update Tab CSS selection styling
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -2277,13 +2556,23 @@ closing of this preservation comment.
 
       // Tab specific buttons HTML
       let cardActionsHTML = '';
+      const commentCount = p.comments ? p.comments.length : 0;
+      const commentChipClass = commentCount > 0 ? 'comment-action-chip has-comments' : 'comment-action-chip';
+      
+      const commentBtnHTML = `
+        <button class="${commentChipClass}" onclick="openCommentsDrawer('${doi}')" title="View team comments">
+          💬 Team Notes ${commentCount > 0 ? `<span>(${commentCount})</span>` : ''}
+        </button>`;
+
       if (currentTab === 'active' || currentTab === 'starred' || currentTab === 'manual') {
         cardActionsHTML = `
+          ${commentBtnHTML}
           <button class="card-action-icon-btn" onclick="softDeletePaper('${doi}')" title="Soft-delete globally">
             🗑️
           </button>`;
       } else if (currentTab === 'deleted') {
         cardActionsHTML = `
+          ${commentBtnHTML}
           <button class="card-action-icon-btn restore-btn" onclick="restorePaper('${doi}')" title="Restore paper globally">
             🔄
           </button>
@@ -2771,6 +3060,211 @@ closing of this preservation comment.
 
     function doiToId(doi) {
       return (doi || '').replace(/[^a-zA-Z0-9]/g, '_');
+    }
+
+    // ── Collaborative Comments Drawer Controls ──
+    let activeCommentDoi = null;
+    let commentRefreshInterval = null;
+
+    function getInitials(name) {
+      if (!name) return "U";
+      const parts = name.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
+    function getAvatarColor(name) {
+      if (!name) return "#20a49f";
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      // Curated vibrant HSL colors for avatars to ensure sleek UI
+      const hue = Math.abs(hash % 360);
+      return `hsl(${hue}, 60%, 45%)`;
+    }
+
+    function formatRelativeTime(isoString) {
+      if (!isoString) return "";
+      try {
+        const date = new Date(isoString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHrs = Math.floor(diffMs / 3600000);
+        
+        if (diffMins < 1) return "Just now";
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHrs < 24) return `${diffHrs}h ago`;
+        
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return "";
+      }
+    }
+
+    async function openCommentsDrawer(doi) {
+      activeCommentDoi = doi;
+      const paper = allPapers.find(p => p.doi === doi);
+      const drawer = document.getElementById("comments-drawer");
+      const backdrop = document.getElementById("drawer-backdrop");
+      const titleElem = document.getElementById("drawer-paper-title");
+      const textarea = document.getElementById("comment-textarea");
+
+      if (titleElem && paper) {
+        titleElem.textContent = paper.title;
+      } else if (titleElem) {
+        titleElem.textContent = "arXiv Paper: " + doi;
+      }
+
+      if (textarea) textarea.value = "";
+
+      // Open drawer in UI
+      drawer.classList.add("open");
+      backdrop.classList.add("open");
+
+      // Load comments from DB
+      await fetchAndRenderComments(doi);
+
+      // Start polling for new comments every 3 seconds to support real-time team syncing while the drawer is open!
+      clearInterval(commentRefreshInterval);
+      commentRefreshInterval = setInterval(() => {
+        if (activeCommentDoi === doi) {
+          fetchAndRenderComments(doi, true); // true = silent refresh
+        }
+      }, 3000);
+    }
+
+    function closeCommentsDrawer() {
+      activeCommentDoi = null;
+      clearInterval(commentRefreshInterval);
+      
+      const drawer = document.getElementById("comments-drawer");
+      const backdrop = document.getElementById("drawer-backdrop");
+      
+      drawer.classList.remove("open");
+      backdrop.classList.remove("open");
+    }
+
+    async function fetchAndRenderComments(doi, silent = false) {
+      try {
+        const res = await fetch(`${API_BASE}/papers/${doi}/comments`);
+        const data = await res.json();
+        
+        if (data.success) {
+          // Update local comment count in memory
+          const paper = allPapers.find(p => p.doi === doi);
+          if (paper) {
+            paper.comments = data.comments;
+            // Update comments count action badge in UI dynamically without reloading the whole feed!
+            const id = doiToId(doi);
+            const chip = document.querySelector(`#card-${id} .comment-action-chip`);
+            if (chip) {
+              const count = data.comments.length;
+              chip.className = count > 0 ? 'comment-action-chip has-comments' : 'comment-action-chip';
+              chip.innerHTML = `💬 Team Notes ${count > 0 ? `<span>(${count})</span>` : ''}`;
+            }
+          }
+          
+          renderCommentsList(data.comments, silent);
+        }
+      } catch (err) {
+        if (!silent) showToast("Failed to sync team comments.", "error");
+      }
+    }
+
+    function renderCommentsList(comments, silent = false) {
+      const list = document.getElementById("comments-list");
+      if (!list) return;
+
+      if (!comments || comments.length === 0) {
+        list.innerHTML = `
+          <div style="text-align: center; color: var(--muted); padding: 60px 20px; font-size: 0.8rem;">
+            <div style="font-size: 2rem; margin-bottom: 12px;">💬</div>
+            <strong>No notes shared yet.</strong>
+            <p style="margin: 6px 0 0 0; font-size:0.72rem; line-height: 1.5;">Write down important findings, questions, or review notes below to share with the team!</p>
+          </div>`;
+        return;
+      }
+
+      const activeUser = getUsername();
+      
+      // Render bubbles chronological list
+      list.innerHTML = comments.map(c => {
+        const initials = getInitials(c.username);
+        const avatarBg = getAvatarColor(c.username);
+        const isOwn = c.username === activeUser;
+        const itemClass = isOwn ? 'comment-item own-comment' : 'comment-item';
+        
+        return `
+          <div class="${itemClass}">
+            <div class="avatar-badge" style="background:${avatarBg};" title="${escapeHtml(c.username)}">${escapeHtml(initials)}</div>
+            <div class="comment-content-wrap">
+              <div class="comment-meta">
+                <span class="comment-author">${escapeHtml(c.username)}</span>
+                <span class="comment-time">${formatRelativeTime(c.timestamp)}</span>
+              </div>
+              <div class="comment-bubble">
+                ${escapeHtml(c.text)}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Auto scroll comments drawer list to the bottom so newest notes are seen instantly
+      if (!silent || list.scrollHeight - list.scrollTop - list.clientHeight < 120) {
+        list.scrollTop = list.scrollHeight;
+      }
+    }
+
+    async function submitComment() {
+      if (!activeCommentDoi) return;
+      
+      const textarea = document.getElementById("comment-textarea");
+      const text = textarea.value.trim();
+      const username = getUsername();
+
+      if (!text) {
+        showToast("Cannot submit an empty note.", "error");
+        return;
+      }
+
+      try {
+        textarea.disabled = true;
+        const res = await fetch(`${API_BASE}/papers/${activeCommentDoi}/comments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, text })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          textarea.value = "";
+          // Re-render comments instantly
+          const paper = allPapers.find(p => p.doi === activeCommentDoi);
+          if (paper) {
+            paper.comments = data.comment ? [...(paper.comments || []), data.comment] : paper.comments;
+          }
+          await fetchAndRenderComments(activeCommentDoi);
+          showToast("Note shared with the team.", "success");
+          loadNotifications(); // Reload notifications activity log feed
+        } else {
+          showToast(data.message || "Failed to save comment.", "error");
+        }
+      } catch (err) {
+        showToast("Database connection lost.", "error");
+      } finally {
+        textarea.disabled = false;
+        textarea.focus();
+      }
+    }
+
+    function handleCommentKey(event) {
+      // Allow Enter to send, Shift+Enter for newline
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        submitComment();
+      }
     }
 
     function escapeHtml(str) {

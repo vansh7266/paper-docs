@@ -153,7 +153,9 @@ from database.mongodb import (
     add_notification_db,
     get_notifications_db,
     clear_all_data_db,
-    get_papers_by_status
+    get_papers_by_status,
+    add_comment_to_paper,
+    get_paper_comments
 )
 from services.arxiv_fetcher import stream_yesterdays_papers_batched, fetch_single_arxiv_paper
 
@@ -497,6 +499,59 @@ def get_notifications():
             "message": str(e)
         }), 500
 
+
+# ============================================================
+# GET /papers/<path:doi>/comments
+# Returns the list of comments for a specific paper
+# ============================================================
+@app.route("/papers/<path:doi>/comments", methods=["GET"])
+def get_comments(doi):
+    try:
+        comments = get_paper_comments(doi)
+        return jsonify({
+            "success": True,
+            "count":   len(comments),
+            "comments": comments
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+# ============================================================
+# POST /papers/<path:doi>/comments
+# Body: { "username": "...", "text": "..." }
+# Appends a team comment and creates a global notification
+# ============================================================
+@app.route("/papers/<path:doi>/comments", methods=["POST"])
+def post_comment(doi):
+    try:
+        data     = request.get_json() or {}
+        username = data.get("username")
+        text     = data.get("text")
+
+        if not username or not text:
+            return jsonify({"success": False, "message": "Missing username or text fields."}), 400
+
+        # Append to database
+        result = add_comment_to_paper(doi, username, text)
+        if result["success"]:
+            # Retrieve paper title to create an informative timeline entry
+            title = _get_paper_title_by_doi(doi)
+            # Log a team activity notification (comment)
+            add_notification_db("comment", username, doi, title, rating=None)
+            
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
 
 
 # ============================================================

@@ -230,7 +230,8 @@ def save_paper_metadata(paper):
             "deleted":   paper.get("deleted", False),
             "starred":   paper.get("starred", False),
             "ratings":   paper.get("ratings", []),
-            "manual":    paper.get("manual", False)
+            "manual":    paper.get("manual", False),
+            "comments":  paper.get("comments", [])
         }
 
         result = collection.insert_one(full_doc)
@@ -514,3 +515,50 @@ def log_successful_crawl(date_str):
     except PyMongoError as e:
         print(f"MongoDB Error in log_successful_crawl: {e}")
         return False
+
+
+def add_comment_to_paper(doi, username, text):
+    """
+    Atomically appends a comment subdocument to a specific paper's comments array.
+    """
+    if collection is None:
+        return {"success": False, "message": "Database unavailable."}
+
+    try:
+        comment = {
+            "username":  username,
+            "text":      text,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        # Atomically push the comment into the array
+        result = collection.update_one(
+            {"doi": doi},
+            {"$push": {"comments": comment}}
+        )
+
+        if result.matched_count == 0:
+            return {"success": False, "message": f"No paper found in DB with DOI: {doi}"}
+
+        return {"success": True, "message": "Comment added successfully.", "comment": comment}
+
+    except PyMongoError as e:
+        print(f"MongoDB Error in add_comment_to_paper: {e}")
+        return {"success": False, "message": f"Database error: {str(e)}"}
+
+
+def get_paper_comments(doi):
+    """
+    Retrieves the comments array for a specific paper.
+    """
+    if collection is None:
+        return []
+
+    try:
+        paper = collection.find_one({"doi": doi}, {"comments": 1, "_id": 0})
+        if paper and "comments" in paper:
+            return paper["comments"]
+        return []
+    except PyMongoError as e:
+        print(f"MongoDB Error in get_paper_comments: {e}")
+        return []
