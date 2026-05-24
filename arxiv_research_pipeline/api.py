@@ -210,6 +210,7 @@ def get_papers():
 def fetch_papers_stream():
     date_str = request.args.get("date")  # Parse optional custom target date YYYY-MM-DD
     def generate():
+        import time
         total_new        = 0
         total_duplicates = 0
 
@@ -219,8 +220,9 @@ def fetch_papers_stream():
                     yield f"data: {json.dumps({'error': 'No papers left to fetch', 'already_crawled': True})}\n\n"
                     return
 
-                batch_new  = []
-                batch_dup  = []
+                # Process and stream papers in smaller sub-batches of 5 to create a beautiful live chatbot-like typewriter streaming effect
+                sub_batch_size = 5
+                sub_batch = []
 
                 for paper in batch:
                     # Save complete metadata to DB
@@ -228,7 +230,7 @@ def fetch_papers_stream():
                     if saved:
                         total_new += 1
                         paper["status"] = "new"
-                        batch_new.append(paper)
+                        sub_batch.append(paper)
                     else:
                         total_duplicates += 1
                         paper["status"] = "duplicate"
@@ -237,19 +239,35 @@ def fetch_papers_stream():
                         if existing:
                             existing["_id"] = str(existing["_id"])
                             existing["status"] = "duplicate"
-                            batch_dup.append(existing)
+                            sub_batch.append(existing)
                         else:
                             paper["status"] = "duplicate"
-                            batch_dup.append(paper)
+                            sub_batch.append(paper)
 
-                event_data = {
-                    "batch":      batch_new + batch_dup,
-                    "batch_new":  len(batch_new),
-                    "batch_dup":  len(batch_dup),
-                    "total_new":  total_new,
-                    "total_dup":  total_duplicates
-                }
-                yield f"data: {json.dumps(event_data)}\n\n"
+                    # If sub-batch is full, yield it immediately
+                    if len(sub_batch) >= sub_batch_size:
+                        event_data = {
+                            "batch":      sub_batch,
+                            "batch_new":  len([p for p in sub_batch if p["status"] == "new"]),
+                            "batch_dup":  len([p for p in sub_batch if p["status"] == "duplicate"]),
+                            "total_new":  total_new,
+                            "total_dup":  total_duplicates
+                        }
+                        yield f"data: {json.dumps(event_data)}\n\n"
+                        sub_batch = []
+                        # Add a tiny delay to ensure a smooth, premium chatbot-like typewriter effect
+                        time.sleep(0.02)
+
+                # Yield any remaining papers in the final sub-batch
+                if sub_batch:
+                    event_data = {
+                        "batch":      sub_batch,
+                        "batch_new":  len([p for p in sub_batch if p["status"] == "new"]),
+                        "batch_dup":  len([p for p in sub_batch if p["status"] == "duplicate"]),
+                        "total_new":  total_new,
+                        "total_dup":  total_duplicates
+                    }
+                    yield f"data: {json.dumps(event_data)}\n\n"
 
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
