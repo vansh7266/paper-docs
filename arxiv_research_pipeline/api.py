@@ -220,8 +220,8 @@ def fetch_papers_stream():
                     yield f"data: {json.dumps({'error': 'No papers left to fetch', 'already_crawled': True})}\n\n"
                     return
 
-                # Process and stream papers in smaller sub-batches of 5 to create a beautiful live chatbot-like typewriter streaming effect
-                sub_batch_size = 5
+                # Process and stream papers in optimized sub-batches of 100 to create a beautiful live progressive streaming effect
+                sub_batch_size = 100
                 sub_batch = []
 
                 for paper in batch:
@@ -255,8 +255,6 @@ def fetch_papers_stream():
                         }
                         yield f"data: {json.dumps(event_data)}\n\n"
                         sub_batch = []
-                        # Add a tiny delay to ensure a smooth, premium chatbot-like typewriter effect
-                        time.sleep(0.02)
 
                 # Yield any remaining papers in the final sub-batch
                 if sub_batch:
