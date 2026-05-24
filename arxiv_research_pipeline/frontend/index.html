@@ -415,8 +415,8 @@ closing of this preservation comment.
       <div id="stats">
         <span id="total-count">0</span> papers loaded
       </div>
-      <button id="load-btn" onclick="startFetch()">⬇ Load Today's Papers</button>
-      <button id="stop-btn" onclick="stopFetch()">✕ Stop</button>
+      <button id="old-load-btn" onclick="startFetch()">⬇ Load Today's Papers</button>
+      <button id="old-stop-btn" onclick="stopFetch()">✕ Stop</button>
     </div>
   </header>
 
@@ -1767,6 +1767,9 @@ closing of this preservation comment.
         <select id="fetch-date-select" class="select-dropdown" style="font-size:0.76rem; font-weight:600; border-color:var(--border-focus); padding: 6px 10px;"></select>
         <button id="load-btn" class="btn" onclick="startFetch()" style="display:inline-flex;">
           ⬇️ Fetch Preprints
+        </button>
+        <button id="stop-btn" class="btn" onclick="stopFetch()" style="display:none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444; font-size:0.76rem; font-weight:600; padding: 6px 12px; align-items: center; justify-content: center;">
+          🛑 Stop
         </button>
       </div>
     </div>
