@@ -324,7 +324,8 @@ def fetch_yesterdays_papers():
 
     all_already_crawled = True
 
-    for days_back in [1, 2]:
+    # for days_back in [1, 2]:
+    for days_back in [1, 2, 3, 4]:
         target = datetime.utcnow() - timedelta(days=days_back)
         target_str = target.strftime("%Y-%m-%d")
 
@@ -344,7 +345,8 @@ def fetch_yesterdays_papers():
         print("All potential dates have already been successfully crawled globally.")
         return "ALREADY_CRAWLED"
 
-    print("No papers found for the last 2 days.")
+    # print("No papers found for the last 2 days.")
+    print("No papers found for the last 4 days.")
     return []
 
 
@@ -372,7 +374,8 @@ def stream_yesterdays_papers_batched(date_str=None):
             yield []
     else:
         all_already_crawled = True
-        for days_back in [1, 2]:
+        # for days_back in [1, 2]:
+        for days_back in [1, 2, 3, 4]:
             target = datetime.utcnow() - timedelta(days=days_back)
             target_str = target.strftime("%Y-%m-%d")
 

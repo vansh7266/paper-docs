@@ -1264,6 +1264,12 @@ closing of this preservation comment.
       to   { transform: scale(1.25); background: #4ecdc4; }
     }
 
+    @keyframes pulseLive {
+      0% { transform: scale(0.95); opacity: 0.5; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.5; }
+    }
+
     #progress-bar-bg {
       flex: 1;
       height: 4px;
@@ -2333,6 +2339,7 @@ closing of this preservation comment.
           <span id="active-count" style="color:var(--accent); font-weight:700;">0</span> records synced
         </div>
         <select id="fetch-date-select" class="select-dropdown" style="font-size:0.76rem; font-weight:600; border-color:var(--border-focus); padding: 6px 10px;"></select>
+        <input type="date" id="custom-fetch-date" class="select-dropdown" style="display:none; font-size:0.76rem; font-weight:600; border-color:var(--border-focus); padding: 5px 10px; width: 135px; color:var(--text); background:var(--card-bg);" max="">
         <button id="load-btn" class="btn" onclick="startFetch()" style="display:inline-flex;">
           ⬇️ Fetch Preprints
         </button>
@@ -2343,23 +2350,44 @@ closing of this preservation comment.
     </div>
 
     <!-- ── Dynamic Progress bar & Molecular Loader ── -->
-    <div id="progress-wrap">
-      <div class="molecular-spinner-wrap">
-        <div class="molecular-spinner">
-          <div class="molecule-node center-node"></div>
-          <div class="molecule-node orbit-node node1"></div>
-          <div class="molecule-node orbit-node node2"></div>
-          <div class="molecule-node orbit-node node3"></div>
-          <div class="molecule-bond bond1"></div>
-          <div class="molecule-bond bond2"></div>
-          <div class="molecule-bond bond3"></div>
+    <div id="progress-wrap" style="display:none; position:relative; padding: 20px 28px; border-bottom: 1px solid var(--border); background: var(--surface-solid); animation: fadeIn 0.25s ease; width:100%; box-sizing:border-box;">
+      <!-- Elegant Manual Dismiss [X] close button -->
+      <button onclick="document.getElementById('progress-wrap').style.display='none'" style="position:absolute; top:12px; right:16px; background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; font-weight:700; padding:4px 8px; border-radius:4px; transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+      
+      <div class="progress-inner-container" style="display:flex; width:100%; gap:24px; align-items:stretch; flex-wrap:wrap;">
+        
+        <!-- Left Side: Progress & Spinner -->
+        <div class="progress-left-side" style="flex:1; min-width:280px; display:flex; flex-direction:column; justify-content:center; gap:16px;">
+          <div class="molecular-spinner-wrap" style="display: flex; justify-content: center; align-items: center; padding: 5px 0;">
+            <div class="molecular-spinner">
+              <div class="molecule-node center-node"></div>
+              <div class="molecule-node orbit-node node1"></div>
+              <div class="molecule-node orbit-node node2"></div>
+              <div class="molecule-node orbit-node node3"></div>
+              <div class="molecule-bond bond1"></div>
+              <div class="molecule-bond bond2"></div>
+              <div class="molecule-bond bond3"></div>
+            </div>
+          </div>
+          <div style="width: 100%; display: flex; align-items: center; gap: 12px;">
+            <div id="progress-bar-bg" style="flex:1; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; position: relative;">
+              <div id="progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent) 0%, #157f7b 100%); box-shadow: 0 0 10px rgba(32,164,159,0.5); transition: width 0.3s ease; border-radius: 4px;"></div>
+            </div>
+            <span id="progress-label" style="font-size: 0.74rem; font-weight:600; color: var(--muted); min-width: 160px;">Preparing arXiv fetch...</span>
+          </div>
         </div>
-      </div>
-      <div style="width: 100%; display: flex; align-items: center; gap: 12px;">
-        <div id="progress-bar-bg">
-          <div id="progress-bar"></div>
+
+        <!-- Right Side: Real-Time Fetching Console Log (Monospace Terminal) -->
+        <div class="progress-right-side" style="width:380px; min-width:280px; display:flex; flex-direction:column; gap:6px;">
+          <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--accent); display:flex; align-items:center; gap:6px;">
+            <span class="live-dot" style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block; animation: pulseLive 1s infinite;"></span>
+            Live Crawling Activity Log
+          </div>
+          <div id="fetch-live-log" class="glass-panel" style="flex:1; height:105px; overflow-y:auto; padding:8px 12px; font-family:'Courier New', Courier, monospace; font-size:0.66rem; color:#a3e635; background:rgba(10,12,24,0.7); border: 1px solid rgba(32,164,159,0.25); border-radius:6px; display:flex; flex-direction:column; gap:4px; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); scroll-behavior: smooth;">
+            <div style="color:var(--muted);">[SYSTEM] Awaiting EventSource connection...</div>
+          </div>
         </div>
-        <span id="progress-label">Preparing arXiv fetch...</span>
+
       </div>
     </div>
 
@@ -2626,8 +2654,8 @@ closing of this preservation comment.
       select.innerHTML = "";
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       
-      // Calculate past 5 days starting from yesterday relative to UTC time
-      for (let i = 1; i <= 5; i++) {
+      // Calculate past 14 days starting from yesterday relative to UTC time
+      for (let i = 1; i <= 14; i++) {
         const d = new Date();
         d.setUTCDate(d.getUTCDate() - i);
         
@@ -2646,6 +2674,30 @@ closing of this preservation comment.
         option.textContent = displayStr;
         select.appendChild(option);
       }
+
+      // Append Premium Custom Date-Picker option
+      const customOption = document.createElement("option");
+      customOption.value = "custom";
+      customOption.textContent = "📅 Select Custom Date...";
+      select.appendChild(customOption);
+
+      // Listener to toggle the calendar date-picker dynamically
+      select.addEventListener("change", function() {
+        const customInput = document.getElementById("custom-fetch-date");
+        if (!customInput) return;
+        if (this.value === "custom") {
+          customInput.style.display = "inline-block";
+          // Set maximum allowed date in calendar as yesterday in UTC to respect arXiv updating cycles
+          const yest = new Date();
+          yest.setUTCDate(yest.getUTCDate() - 1);
+          const yyyy = yest.getUTCFullYear();
+          const mm = String(yest.getUTCMonth() + 1).padStart(2, '0');
+          const dd = String(yest.getUTCDate()).padStart(2, '0');
+          customInput.max = `${yyyy}-${mm}-${dd}`;
+        } else {
+          customInput.style.display = "none";
+        }
+      });
     }
 
     function signOut() {
@@ -3529,8 +3581,31 @@ closing of this preservation comment.
       const stopBtn = document.getElementById('stop-btn');
       const dateSelect = document.getElementById('fetch-date-select');
       
-      const selectedDate = dateSelect.value;
-      const selectedLabel = dateSelect.options[dateSelect.selectedIndex].text;
+      let selectedDate = dateSelect.value;
+      let selectedLabel = dateSelect.options[dateSelect.selectedIndex].text;
+
+      // Handle Premium Custom Calendar Date choice
+      if (selectedDate === "custom") {
+        const customInput = document.getElementById("custom-fetch-date");
+        if (!customInput || !customInput.value) {
+          showToast("Please choose a valid custom date from the calendar.", "warning");
+          isFetching = false;
+          if (loadBtn) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = "⬇️ Fetch Preprints";
+          }
+          if (stopBtn) {
+            stopBtn.style.display = 'none';
+          }
+          return;
+        }
+        selectedDate = customInput.value; // YYYY-MM-DD
+        
+        // Parse and format custom date label beautifully for UI display, e.g. "May 22, 2026"
+        const [cyear, cmonth, cday] = selectedDate.split("-");
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        selectedLabel = `${months[parseInt(cmonth, 10) - 1]} ${parseInt(cday, 10)}, ${cyear}`;
+      }
 
       if (loadBtn) {
         loadBtn.disabled = true;
@@ -3538,6 +3613,12 @@ closing of this preservation comment.
       }
       if (stopBtn) {
         stopBtn.style.display = 'inline-flex';
+      }
+
+      // Clear live logs and prepare console
+      const logConsole = document.getElementById("fetch-live-log");
+      if (logConsole) {
+        logConsole.innerHTML = `<div style="color:var(--accent); font-weight:600;">[SYSTEM] Initializing stream...</div>`;
       }
 
       document.getElementById('empty-state').style.display = 'none';
@@ -3553,26 +3634,83 @@ closing of this preservation comment.
       es.onmessage = function(event) {
         const data = JSON.parse(event.data);
 
+        // Print connection log on first chunk
+        if (logConsole && logConsole.innerHTML.includes("Initializing")) {
+          logConsole.innerHTML += `<div style="color:#a3e635;">[SYSTEM] Connection established! Querying arXiv API...</div>`;
+        }
+
         if (data.done) {
           es.close();
-          resetFetchUI();
+          
+          isFetching = false;
+          activeES = null;
+          if (loadBtn) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = "⬇️ Fetch Preprints";
+          }
+          if (stopBtn) {
+            stopBtn.style.display = 'none';
+          }
           document.getElementById('progress-bar').style.width = '100%';
-          showToast(`Fetch completed! Loaded successfully.`, 'success');
+          document.getElementById('progress-label').textContent = `Fetch completed! Synced +${data.new} new preprints.`;
+          
+          if (logConsole) {
+            const finalTime = new Date().toLocaleTimeString();
+            const finalLog = document.createElement("div");
+            finalLog.innerHTML = `<span style="color:#22c55e; font-weight:700;">[${finalTime}] ✅ SUCCESS:</span> Crawl finished. +${data.new} new, ${data.duplicates} skipped.`;
+            logConsole.appendChild(finalLog);
+            logConsole.scrollTop = logConsole.scrollHeight;
+          }
+          
+          showToast(`Fetch completed! Loaded ${data.new} new papers successfully.`, 'success');
           loadPapers();
           loadNotifications();
+          
+          // Auto-hide progress panel after 7 seconds so users can read the console
+          setTimeout(() => {
+            if (!isFetching) {
+              document.getElementById('progress-wrap').style.display = 'none';
+            }
+          }, 7000);
           return;
         }
 
         if (data.error) {
           es.close();
-          resetFetchUI();
+          
+          isFetching = false;
+          activeES = null;
+          if (loadBtn) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = "⬇️ Fetch Preprints";
+          }
+          if (stopBtn) {
+            stopBtn.style.display = 'none';
+          }
+          
+          if (logConsole) {
+            const errTime = new Date().toLocaleTimeString();
+            const errLog = document.createElement("div");
+            errLog.innerHTML = `<span style="color:#ef4444; font-weight:700;">[${errTime}] ❌ ERROR:</span> ${data.error}`;
+            logConsole.appendChild(errLog);
+            logConsole.scrollTop = logConsole.scrollHeight;
+          }
+
           if (data.already_crawled || data.error.includes("No papers left to fetch")) {
             showToast("No papers left to fetch.", "info");
-            alert("No papers left to fetch. Yesterday's preprints have already been successfully loaded globally!");
+            document.getElementById('progress-label').textContent = "Preprints already crawled globally.";
           } else {
             showToast(`Error: ${data.error}`, 'error');
+            document.getElementById('progress-label').textContent = "An error occurred during crawling.";
           }
           loadPapers();
+          
+          // Auto-hide progress after 8 seconds on error
+          setTimeout(() => {
+            if (!isFetching) {
+              document.getElementById('progress-wrap').style.display = 'none';
+            }
+          }, 8000);
           return;
         }
 
@@ -3589,6 +3727,27 @@ closing of this preservation comment.
             handleSearch();
           }
 
+          // Live Monospace Console Logging - prints each paper as it crawls in real time!
+          if (logConsole) {
+            data.batch.forEach(paper => {
+              const timeStr = new Date().toLocaleTimeString();
+              const logEntry = document.createElement("div");
+              if (paper.status === 'new') {
+                logEntry.innerHTML = `<span style="color:#20a49f;">[${timeStr}] 📥 SAVED:</span> ${paper.doi} - <span style="color:var(--text-bright);">${paper.title.substring(0, 42)}...</span>`;
+              } else {
+                logEntry.innerHTML = `<span style="color:var(--muted);">[${timeStr}] 🔁 SKIP:</span> ${paper.doi} - ${paper.title.substring(0, 42)}...`;
+              }
+              logConsole.appendChild(logEntry);
+            });
+            
+            // Print Batch Summary
+            const batchTime = new Date().toLocaleTimeString();
+            const batchLog = document.createElement("div");
+            batchLog.innerHTML = `<span style="color:#eab308; font-weight:700;">[${batchTime}] 📊 BATCH:</span> Synced ${data.batch.length} papers | <span style="color:#20a49f;">+${data.batch_new} new</span> | <span style="color:var(--muted);">${data.batch_dup} duplicates</span>`;
+            logConsole.appendChild(batchLog);
+            logConsole.scrollTop = logConsole.scrollHeight;
+          }
+
           const w = Math.min(95, 5 + (data.total_new + data.total_dup) * 0.05);
           document.getElementById('progress-bar').style.width = w + '%';
           document.getElementById('progress-label').textContent =
@@ -3599,9 +3758,33 @@ closing of this preservation comment.
       es.onerror = function() {
         if (isFetching) {
           es.close();
-          resetFetchUI();
+          isFetching = false;
+          activeES = null;
+          if (loadBtn) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = "⬇️ Fetch Preprints";
+          }
+          if (stopBtn) {
+            stopBtn.style.display = 'none';
+          }
+          
+          if (logConsole) {
+            const errTime = new Date().toLocaleTimeString();
+            const errLog = document.createElement("div");
+            errLog.innerHTML = `<span style="color:#ef4444; font-weight:700;">[${errTime}] ❌ DISCONNECT:</span> Connection lost.`;
+            logConsole.appendChild(errLog);
+            logConsole.scrollTop = logConsole.scrollHeight;
+          }
+          
           showToast('Connection to API lost. Is api.py running?', 'error');
+          document.getElementById('progress-label').textContent = "Disconnected from API.";
           loadPapers();
+          
+          setTimeout(() => {
+            if (!isFetching) {
+              document.getElementById('progress-wrap').style.display = 'none';
+            }
+          }, 8000);
         }
       };
     }
