@@ -2350,44 +2350,40 @@ closing of this preservation comment.
     </div>
 
     <!-- ── Dynamic Progress bar & Molecular Loader ── -->
-    <div id="progress-wrap" style="display:none; position:relative; padding: 20px 28px; border-bottom: 1px solid var(--border); background: var(--surface-solid); animation: fadeIn 0.25s ease; width:100%; box-sizing:border-box;">
+    <!-- ── Floating Progress & Live Log Overlay (bottom-right corner, does NOT push content) ── -->
+    <div id="progress-wrap" style="display:none; position:fixed; bottom:24px; right:24px; z-index:1000; width:480px; max-width:calc(100vw - 32px); background:var(--surface-solid); border:1px solid rgba(32,164,159,0.3); border-radius:12px; box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(32,164,159,0.1); padding:16px 18px 14px; box-sizing:border-box; animation: fadeIn 0.25s ease;">
       <!-- Elegant Manual Dismiss [X] close button -->
-      <button onclick="document.getElementById('progress-wrap').style.display='none'" style="position:absolute; top:12px; right:16px; background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; font-weight:700; padding:4px 8px; border-radius:4px; transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">✕</button>
-      
-      <div class="progress-inner-container" style="display:flex; width:100%; gap:24px; align-items:stretch; flex-wrap:wrap;">
-        
-        <!-- Left Side: Progress & Spinner -->
-        <div class="progress-left-side" style="flex:1; min-width:280px; display:flex; flex-direction:column; justify-content:center; gap:16px;">
-          <div class="molecular-spinner-wrap" style="display: flex; justify-content: center; align-items: center; padding: 5px 0;">
-            <div class="molecular-spinner">
-              <div class="molecule-node center-node"></div>
-              <div class="molecule-node orbit-node node1"></div>
-              <div class="molecule-node orbit-node node2"></div>
-              <div class="molecule-node orbit-node node3"></div>
-              <div class="molecule-bond bond1"></div>
-              <div class="molecule-bond bond2"></div>
-              <div class="molecule-bond bond3"></div>
+      <button onclick="document.getElementById('progress-wrap').style.display='none'" style="position:absolute; top:10px; right:12px; background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; font-weight:700; padding:4px 8px; border-radius:4px; transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+
+      <!-- Header row: spinner + label -->
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; padding-right:28px;">
+        <div class="molecular-spinner" style="transform:scale(0.45); transform-origin:left center; flex-shrink:0; width:40px; height:40px;">
+          <div class="molecule-node center-node"></div>
+          <div class="molecule-node orbit-node node1"></div>
+          <div class="molecule-node orbit-node node2"></div>
+          <div class="molecule-node orbit-node node3"></div>
+          <div class="molecule-bond bond1"></div>
+          <div class="molecule-bond bond2"></div>
+          <div class="molecule-bond bond3"></div>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:5px;">
+            <span class="live-dot" style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block; flex-shrink:0; animation: pulseLive 1s infinite;"></span>
+            <span style="font-size:0.67rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--accent);">Live Crawling Activity</span>
+          </div>
+          <!-- Progress bar -->
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="flex:1; height:5px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;">
+              <div id="progress-bar" style="height:100%; width:0%; background:linear-gradient(90deg, var(--accent) 0%, #157f7b 100%); box-shadow:0 0 8px rgba(32,164,159,0.5); transition:width 0.3s ease; border-radius:4px;"></div>
             </div>
           </div>
-          <div style="width: 100%; display: flex; align-items: center; gap: 12px;">
-            <div id="progress-bar-bg" style="flex:1; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; position: relative;">
-              <div id="progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent) 0%, #157f7b 100%); box-shadow: 0 0 10px rgba(32,164,159,0.5); transition: width 0.3s ease; border-radius: 4px;"></div>
-            </div>
-            <span id="progress-label" style="font-size: 0.74rem; font-weight:600; color: var(--muted); min-width: 160px;">Preparing arXiv fetch...</span>
-          </div>
+          <div id="progress-label" style="font-size:0.65rem; font-weight:600; color:var(--muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Preparing arXiv fetch...</div>
         </div>
+      </div>
 
-        <!-- Right Side: Real-Time Fetching Console Log (Monospace Terminal) -->
-        <div class="progress-right-side" style="width:380px; min-width:280px; display:flex; flex-direction:column; gap:6px;">
-          <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--accent); display:flex; align-items:center; gap:6px;">
-            <span class="live-dot" style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block; animation: pulseLive 1s infinite;"></span>
-            Live Crawling Activity Log
-          </div>
-          <div id="fetch-live-log" class="glass-panel" style="flex:1; height:105px; overflow-y:auto; padding:8px 12px; font-family:'Courier New', Courier, monospace; font-size:0.66rem; color:#a3e635; background:rgba(10,12,24,0.7); border: 1px solid rgba(32,164,159,0.25); border-radius:6px; display:flex; flex-direction:column; gap:4px; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); scroll-behavior: smooth;">
-            <div style="color:var(--muted);">[SYSTEM] Awaiting EventSource connection...</div>
-          </div>
-        </div>
-
+      <!-- Live console log -->
+      <div id="fetch-live-log" class="glass-panel" style="height:130px; overflow-y:auto; padding:8px 10px; font-family:'Courier New', Courier, monospace; font-size:0.63rem; color:#a3e635; background:rgba(10,12,24,0.75); border:1px solid rgba(32,164,159,0.2); border-radius:6px; display:flex; flex-direction:column; gap:3px; box-shadow:inset 0 0 10px rgba(0,0,0,0.8); scroll-behavior:smooth;">
+        <div style="color:var(--muted);">[SYSTEM] Awaiting EventSource connection...</div>
       </div>
     </div>
 
