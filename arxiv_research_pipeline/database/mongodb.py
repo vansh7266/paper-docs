@@ -225,8 +225,10 @@ def save_paper_metadata(paper):
             print("Missing DOI field in paper metadata.")
             return False
 
-        if collection.find_one({"doi": doi}):
-            print(f"Paper duplicate skipped: {doi}")
+        import re
+        base_doi = re.sub(r'v\d+$', '', doi)
+        if collection.find_one({"doi": {"$regex": f"^{re.escape(base_doi)}(v\\d+)?$"}}):
+            print(f"Paper duplicate (base DOI match) skipped: {doi}")
             return False
 
         full_doc = {

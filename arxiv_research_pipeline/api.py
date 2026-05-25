@@ -249,16 +249,7 @@ def fetch_papers_stream():
                         sub_batch.append(paper)
                     else:
                         total_duplicates += 1
-                        paper["status"] = "duplicate"
-                        # Fetch existing document to stream full info to frontend
-                        existing = collection.find_one({"doi": paper["doi"]})
-                        if existing:
-                            existing["_id"] = str(existing["_id"])
-                            existing["status"] = "duplicate"
-                            sub_batch.append(existing)
-                        else:
-                            paper["status"] = "duplicate"
-                            sub_batch.append(paper)
+                        # Duplicates are completely skipped and not appended to stream to keep feed pristine & fast!
 
                     # If sub-batch is full, yield it immediately
                     if len(sub_batch) >= sub_batch_size:
@@ -450,14 +441,17 @@ def add_paper():
     doi = paper["doi"]
     title = paper["title"]
 
-    # Check if exists in DB
-    existing = collection.find_one({"doi": doi})
+    # Check if exists in DB (matching by base DOI to ignore versions)
+    import re
+    base_doi = re.sub(r'v\d+$', '', doi)
+    existing = collection.find_one({"doi": {"$regex": f"^{re.escape(base_doi)}(v\\d+)?$"}})
     if existing:
+        existing_doi = existing["doi"]
         if existing.get("deleted"):
             # Restore it if it was previously soft-deleted
-            restore_paper_db(doi, username)
-            collection.update_one({"doi": doi}, {"$set": {"manual": True}})
-            add_notification_db("restore", username, doi, title)
+            restore_paper_db(existing_doi, username)
+            collection.update_one({"doi": existing_doi}, {"$set": {"manual": True}})
+            add_notification_db("restore", username, existing_doi, title)
             return jsonify({
                 "success": True,
                 "message": f"Paper '{title}' restored from Temporary Memory.",

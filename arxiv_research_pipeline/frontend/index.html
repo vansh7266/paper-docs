@@ -3238,7 +3238,7 @@ closing of this preservation comment.
           ${assignmentBannerHTML}
           <div class="card-top-row">
             <div class="paper-title">
-              <a href="${p.link}" target="_blank" rel="noopener">${escapeHtml(p.title)}</a>
+              <a href="${p.link}" target="_blank" rel="noopener">${escapeHtml(p.title || p.doi || "Untitled Preprint")}</a>
             </div>
             <div class="card-badges">
               ${myRatingBadge}
@@ -3732,10 +3732,11 @@ closing of this preservation comment.
             data.batch.forEach(paper => {
               const timeStr = new Date().toLocaleTimeString();
               const logEntry = document.createElement("div");
+              const titleStr = paper.title || paper.doi || "Untitled Preprint";
               if (paper.status === 'new') {
-                logEntry.innerHTML = `<span style="color:#20a49f;">[${timeStr}] 📥 SAVED:</span> ${paper.doi} - <span style="color:var(--text-bright);">${paper.title.substring(0, 42)}...</span>`;
+                logEntry.innerHTML = `<span style="color:#20a49f;">[${timeStr}] 📥 SAVED:</span> ${paper.doi} - <span style="color:var(--text-bright);">${titleStr.substring(0, 42)}...</span>`;
               } else {
-                logEntry.innerHTML = `<span style="color:var(--muted);">[${timeStr}] 🔁 SKIP:</span> ${paper.doi} - ${paper.title.substring(0, 42)}...`;
+                logEntry.innerHTML = `<span style="color:var(--muted);">[${timeStr}] 🔁 SKIP:</span> ${paper.doi} - ${titleStr.substring(0, 42)}...`;
               }
               logConsole.appendChild(logEntry);
             });
