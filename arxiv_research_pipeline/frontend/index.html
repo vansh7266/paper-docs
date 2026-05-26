@@ -3069,12 +3069,12 @@ closing of this preservation comment.
       filtered = allPapers.filter(p => {
         const matchText = !query || (p.title || '').toLowerCase().includes(query);
 
-        // Check if active user has reviewed
-        const userRatingObj = p.ratings ? p.ratings.find(r => r.username === getUsername()) : null;
+        // Check if ANY team member has reviewed (global filter)
+        const hasAnyRating = p.ratings && p.ratings.length > 0;
         const matchRated =
           ratedFilter === 'all' ? true :
-          ratedFilter === 'rated' ? userRatingObj !== undefined && userRatingObj !== null :
-                                    userRatingObj === undefined || userRatingObj === null;
+          ratedFilter === 'rated' ? hasAnyRating :
+                                    !hasAnyRating;
 
         return matchText && matchRated;
       });
