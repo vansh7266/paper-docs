@@ -240,7 +240,8 @@ def save_paper_metadata(paper):
             "starred":   paper.get("starred", False),
             "ratings":   paper.get("ratings", []),
             "manual":    paper.get("manual", False),
-            "comments":  paper.get("comments", [])
+            "comments":  paper.get("comments", []),
+            "tags":      paper.get("tags", [])
         }
 
         result = collection.insert_one(full_doc)
@@ -250,6 +251,41 @@ def save_paper_metadata(paper):
     except PyMongoError as e:
         print(f"MongoDB Error in save_paper_metadata: {e}")
         return False
+
+
+def tag_paper_db(doi, tag, action):
+    """
+    Atomically adds ($addToSet) or removes ($pull) a global tag for a paper.
+    Valid tags: 'diffusion', 'fine-tuning'
+    Valid actions: 'add', 'remove'
+    """
+    if collection is None:
+        return {"success": False, "message": "Database unavailable."}
+        
+    if tag not in ["diffusion", "fine-tuning"]:
+        return {"success": False, "message": "Invalid tag. Must be 'diffusion' or 'fine-tuning'."}
+        
+    try:
+        if action == "add":
+            result = collection.update_one(
+                {"doi": doi},
+                {"$addToSet": {"tags": tag}}
+            )
+        elif action == "remove":
+            result = collection.update_one(
+                {"doi": doi},
+                {"$pull": {"tags": tag}}
+            )
+        else:
+            return {"success": False, "message": "Invalid action. Must be 'add' or 'remove'."}
+            
+        if result.matched_count == 0:
+            return {"success": False, "message": f"No paper found in DB with DOI: {doi}"}
+            
+        return {"success": True, "message": f"Tag '{tag}' successfully {action}ed."}
+    except PyMongoError as e:
+        print(f"MongoDB Error in tag_paper_db: {e}")
+        return {"success": False, "message": f"Database error: {str(e)}"}
 
 
 def rate_paper_db(doi, username, rating):

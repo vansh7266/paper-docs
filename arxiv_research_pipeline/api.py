@@ -145,6 +145,7 @@ from database.mongodb import (
     collection,
     save_paper_metadata,
     rate_paper_db,
+    tag_paper_db,
     soft_delete_paper_db,
     restore_paper_db,
     permanent_delete_paper_db,
@@ -320,6 +321,41 @@ def rate():
         return jsonify(result), 200
     else:
         return jsonify(result), 400
+
+
+# ============================================================
+# POST /tag
+# Body: { "doi": "...", "tag": "diffusion"|"fine-tuning", "action": "add"|"remove", "username": "..." }
+# Toggles global categorization tag on a paper and logs a team notification
+# ============================================================
+@app.route("/tag", methods=["POST"])
+def tag_paper():
+    try:
+        data     = request.get_json() or {}
+        doi      = data.get("doi")
+        tag      = data.get("tag")
+        action   = data.get("action")
+        username = data.get("username")
+
+        if not doi or not tag or not action or not username:
+            return jsonify({"success": False, "message": "Missing doi, tag, action, or username."}), 400
+
+        if tag not in ["diffusion", "fine-tuning"]:
+            return jsonify({"success": False, "message": "Invalid tag. Must be 'diffusion' or 'fine-tuning'."}), 400
+
+        if action not in ["add", "remove"]:
+            return jsonify({"success": False, "message": "Invalid action. Must be 'add' or 'remove'."}), 400
+
+        result = tag_paper_db(doi, tag, action)
+        if result["success"]:
+            title = _get_paper_title_by_doi(doi)
+            add_notification_db("tag", username, doi, title, rating={"tag": tag, "action": action})
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 # ============================================================
