@@ -2468,6 +2468,10 @@ closing of this preservation comment.
             <option value="diffusion">🏷️ Diffusion</option>
             <option value="fine-tuning">🏷️ Fine-Tuning</option>
           </select>
+          <select id="sort-date" class="select-dropdown" onchange="handleSearch()">
+            <option value="desc">📅 Newest First</option>
+            <option value="asc">📅 Oldest First</option>
+          </select>
         </div>
 
         <!-- Papers List -->
@@ -3133,12 +3137,13 @@ closing of this preservation comment.
       const query = document.getElementById('search-input').value.toLowerCase();
       const ratedFilter = document.getElementById('filter-rated').value;
       const tagFilter = document.getElementById('filter-tag').value;
+      const sortDirection = document.getElementById('sort-date').value;
 
-      // Ensure allPapers is sorted descending by publication date (newest preprints on top)
+      // Sort allPapers based on selected direction (Newest First vs. Oldest First)
       allPapers.sort((a, b) => {
         const dateA = a.published ? new Date(a.published) : new Date(0);
         const dateB = b.published ? new Date(b.published) : new Date(0);
-        return dateB - dateA;
+        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
       });
 
       filtered = allPapers.filter(p => {
