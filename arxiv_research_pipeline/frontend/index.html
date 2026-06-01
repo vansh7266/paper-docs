@@ -2468,6 +2468,7 @@ closing of this preservation comment.
             <option value="diffusion">🏷️ Diffusion</option>
             <option value="fine-tuning">🏷️ Fine-Tuning</option>
           </select>
+          <input type="date" id="filter-date" class="select-dropdown" onchange="handleSearch()" style="color-scheme: dark; font-family: inherit; font-size: 0.74rem; width: 145px; padding: 5px 10px;" title="Filter papers by publication date" />
           <select id="sort-date" class="select-dropdown" onchange="handleSearch()">
             <option value="desc">📅 Newest First</option>
             <option value="asc">📅 Oldest First</option>
@@ -3138,6 +3139,7 @@ closing of this preservation comment.
       const ratedFilter = document.getElementById('filter-rated').value;
       const tagFilter = document.getElementById('filter-tag').value;
       const sortDirection = document.getElementById('sort-date').value;
+      const filterDateVal = document.getElementById('filter-date').value; // Returns "YYYY-MM-DD" or ""
 
       // Sort allPapers based on selected direction (Newest First vs. Oldest First)
       allPapers.sort((a, b) => {
@@ -3163,7 +3165,11 @@ closing of this preservation comment.
           tagFilter === 'fine-tuning' ? paperTags.includes('fine-tuning') :
                                        true;
 
-        return matchText && matchRated && matchTag;
+        // Match publication date prefix (YYYY-MM-DD)
+        const paperPubDate = p.published ? p.published.substring(0, 10) : '';
+        const matchDate = !filterDateVal || paperPubDate === filterDateVal;
+
+        return matchText && matchRated && matchTag && matchDate;
       });
 
       if (!keepPage) {
